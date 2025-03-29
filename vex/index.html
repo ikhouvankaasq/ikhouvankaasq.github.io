@@ -1,0 +1,334 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>VEX GAMES</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0a0a1a;
+            color: #00ffff;
+            font-family: 'Orbitron', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .title {
+            font-size: 4rem;
+            margin-top: 50px;
+            text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 30px #00ffff;
+            letter-spacing: 5px;
+        }
+        .game-container {
+            margin-top: 50px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .game-button {
+            background-color: #00ffff;
+            color: #0a0a1a;
+            border: 3px solid #00ffff;
+            padding: 15px 30px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px #00ffff;
+        }
+        .game-button:hover {
+            background-color: #0a0a1a;
+            color: #00ffff;
+        }
+    </style>
+</head>
+<body>
+    <div class="title">VEX GAMES</div>
+    <div class="game-container">
+        <button class="game-button" id="vexGame3">Play VEX 3</button>
+        <button class="game-button" id="vexGame4">Play VEX 4</button>
+        <button class="game-button" id="vexGame5">Play VEX 5</button>
+        <button class="game-button" id="vexGame6">Play VEX 6</button>
+        <button class="game-button" id="vexGame7">Play VEX 7</button>
+        <button class="game-button" id="vexGame8">Play VEX 8</button>
+        <button class="game-button" id="vexChallenges">Play VEX Challenges</button>
+        <button class="game-button" id="vexX3M">Play VEX X3M</button>
+        <button class="game-button" id="vexX3M2">Play VEX X3M 2</button>
+    </div>
+
+    <script>
+        // VEX 3 Game
+        var url3 = "https://online.fuxien.com/projects/vex3/index.html";
+        if (url3) {
+            var win3;
+ 
+            document.querySelector('#vexGame3').onclick = function() {
+                if (win3) {
+                    win3.focus();
+                } else {
+                    win3 = window.open();
+                    win3.document.body.style.margin = '0';
+                    win3.document.body.style.height = '100vh';
+                    var iframe = win3.document.createElement('iframe');
+                    iframe.style.border = 'none';
+                    iframe.style.width = '100%';
+                    iframe.style.height = '100%';
+                    iframe.style.margin = '0';
+                    iframe.src = url3;
+                    win3.document.body.appendChild(iframe);
+ 
+                    var interval = setInterval(function() {
+                        if (win3.closed) {
+                            clearInterval(interval);
+                            win3 = undefined;
+                        }
+                    }, 500);
+                }
+            };
+        }
+
+        // VEX 4 Game
+        var url4 = "https://gavan228.github.io/gaming/vex4/";
+        if (url4) {
+            var win4;
+ 
+            document.querySelector('#vexGame4').onclick = function() {
+                if (win4) {
+                    win4.focus();
+                } else {
+                    win4 = window.open();
+                    win4.document.body.style.margin = '0';
+                    win4.document.body.style.height = '100vh';
+                    var iframe = win4.document.createElement('iframe');
+                    iframe.style.border = 'none';
+                    iframe.style.width = '100%';
+                    iframe.style.height = '100%';
+                    iframe.style.margin = '0';
+                    iframe.src = url4;
+                    win4.document.body.appendChild(iframe);
+ 
+                    var interval = setInterval(function() {
+                        if (win4.closed) {
+                            clearInterval(interval);
+                            win4 = undefined;
+                        }
+                    }, 500);
+                }
+            };
+        }
+
+        // VEX 5 Game
+        var url5 = "https://vex5.gitlab.io/file/";
+        if (url5) {
+            var win5;
+ 
+            document.querySelector('#vexGame5').onclick = function() {
+                if (win5) {
+                    win5.focus();
+                } else {
+                    win5 = window.open();
+                    win5.document.body.style.margin = '0';
+                    win5.document.body.style.height = '100vh';
+                    var iframe = win5.document.createElement('iframe');
+                    iframe.style.border = 'none';
+                    iframe.style.width = '100%';
+                    iframe.style.height = '100%';
+                    iframe.style.margin = '0';
+                    iframe.src = url5;
+                    win5.document.body.appendChild(iframe);
+ 
+                    var interval = setInterval(function() {
+                        if (win5.closed) {
+                            clearInterval(interval);
+                            win5 = undefined;
+                        }
+                    }, 500);
+                }
+            };
+        }
+
+        // VEX 6 Game
+        var url6 = "https://unblockedgamesfree.github.io/vex-6/";
+        if (url6) {
+            var win6;
+ 
+            document.querySelector('#vexGame6').onclick = function() {
+                if (win6) {
+                    win6.focus();
+                } else {
+                    win6 = window.open();
+                    win6.document.body.style.margin = '0';
+                    win6.document.body.style.height = '100vh';
+                    var iframe = win6.document.createElement('iframe');
+                    iframe.style.border = 'none';
+                    iframe.style.width = '100%';
+                    iframe.style.height = '100%';
+                    iframe.style.margin = '0';
+                    iframe.src = url6;
+                    win6.document.body.appendChild(iframe);
+ 
+                    var interval = setInterval(function() {
+                        if (win6.closed) {
+                            clearInterval(interval);
+                            win6 = undefined;
+                        }
+                    }, 500);
+                }
+            };
+        }
+
+        // VEX 7 Game
+        var url7 = "https://unblockedgamesfree.github.io/vex-7/";
+        if (url7) {
+            var win7;
+ 
+            document.querySelector('#vexGame7').onclick = function() {
+                if (win7) {
+                    win7.focus();
+                } else {
+                    win7 = window.open();
+                    win7.document.body.style.margin = '0';
+                    win7.document.body.style.height = '100vh';
+                    var iframe = win7.document.createElement('iframe');
+                    iframe.style.border = 'none';
+                    iframe.style.width = '100%';
+                    iframe.style.height = '100%';
+                    iframe.style.margin = '0';
+                    iframe.src = url7;
+                    win7.document.body.appendChild(iframe);
+ 
+                    var interval = setInterval(function() {
+                        if (win7.closed) {
+                            clearInterval(interval);
+                            win7 = undefined;
+                        }
+                    }, 500);
+                }
+            };
+        }
+
+        // VEX 8 Game
+        var url8 = "https://classroomjq.github.io/vex-8/";
+        if (url8) {
+            var win8;
+ 
+            document.querySelector('#vexGame8').onclick = function() {
+                if (win8) {
+                    win8.focus();
+                } else {
+                    win8 = window.open();
+                    win8.document.body.style.margin = '0';
+                    win8.document.body.style.height = '100vh';
+                    var iframe = win8.document.createElement('iframe');
+                    iframe.style.border = 'none';
+                    iframe.style.width = '100%';
+                    iframe.style.height = '100%';
+                    iframe.style.margin = '0';
+                    iframe.src = url8;
+                    win8.document.body.appendChild(iframe);
+ 
+                    var interval = setInterval(function() {
+                        if (win8.closed) {
+                            clearInterval(interval);
+                            win8 = undefined;
+                        }
+                    }, 500);
+                }
+            };
+        }
+
+        // VEX Challenges Game
+        var urlChallenges = "https://rebemanae.github.io/vex-challenges/";
+        if (urlChallenges) {
+            var winChallenges;
+ 
+            document.querySelector('#vexChallenges').onclick = function() {
+                if (winChallenges) {
+                    winChallenges.focus();
+                } else {
+                    winChallenges = window.open();
+                    winChallenges.document.body.style.margin = '0';
+                    winChallenges.document.body.style.height = '100vh';
+                    var iframe = winChallenges.document.createElement('iframe');
+                    iframe.style.border = 'none';
+                    iframe.style.width = '100%';
+                    iframe.style.height = '100%';
+                    iframe.style.margin = '0';
+                    iframe.src = urlChallenges;
+                    winChallenges.document.body.appendChild(iframe);
+ 
+                    var interval = setInterval(function() {
+                        if (winChallenges.closed) {
+                            clearInterval(interval);
+                            winChallenges = undefined;
+                        }
+                    }, 500);
+                }
+            };
+        }
+
+        // Vex X3M Game
+        var urlX3M = "https://html5.gamedistribution.com/0a3c55fe33ba415f9b761b5831e75b27/?gd_sdk_referrer_url=https://gamedistribution.com/games/vex-x3m";
+        if (urlX3M) {
+            var winX3M;
+ 
+            document.querySelector('#vexX3M').onclick = function() {
+                if (winX3M) {
+                    winX3M.focus();
+                } else {
+                    winX3M = window.open();
+                    winX3M.document.body.style.margin = '0';
+                    winX3M.document.body.style.height = '100vh';
+                    var iframe = winX3M.document.createElement('iframe');
+                    iframe.style.border = 'none';
+                    iframe.style.width = '100%';
+                    iframe.style.height = '100%';
+                    iframe.style.margin = '0';
+                    iframe.src = urlX3M;
+                    winX3M.document.body.appendChild(iframe);
+ 
+                    var interval = setInterval(function() {
+                        if (winX3M.closed) {
+                            clearInterval(interval);
+                            winX3M = undefined;
+                        }
+                    }, 500);
+                }
+            };
+        }
+
+        // Vex X3M 2 Game
+        var urlX3M2 = "https://html5.gamedistribution.com/faf4cfc80f8049f78e1ade958e5332a4/?gd_sdk_referrer_url=https://gamedistribution.com/games/vex-x3m-2/";
+        if (urlX3M2) {
+            var winX3M2;
+ 
+            document.querySelector('#vexX3M2').onclick = function() {
+                if (winX3M2) {
+                    winX3M2.focus();
+                } else {
+                    winX3M2 = window.open();
+                    winX3M2.document.body.style.margin = '0';
+                    winX3M2.document.body.style.height = '100vh';
+                    var iframe = winX3M2.document.createElement('iframe');
+                    iframe.style.border = 'none';
+                    iframe.style.width = '100%';
+                    iframe.style.height = '100%';
+                    iframe.style.margin = '0';
+                    iframe.src = urlX3M2;
+                    winX3M2.document.body.appendChild(iframe);
+ 
+                    var interval = setInterval(function() {
+                        if (winX3M2.closed) {
+                            clearInterval(interval);
+                            winX3M2 = undefined;
+                        }
+                    }, 500);
+                }
+            };
+        }
+    </script>
+</body>
+</html>
