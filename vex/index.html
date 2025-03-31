@@ -56,7 +56,6 @@
         <button class="game-button" id="vexGame8">Play VEX 8</button>
         <button class="game-button" id="vexChallenges">Play VEX Challenges</button>
         <button class="game-button" id="vexX3M">Play VEX X3M</button>
-        <button class="game-button" id="vexX3M2">Play VEX X3M 2</button>
     </div>
 
     <script>
@@ -271,7 +270,7 @@
         }
 
         // Vex X3M Game
-        var urlX3M = "https://html5.gamedistribution.com/0a3c55fe33ba415f9b761b5831e75b27/?gd_sdk_referrer_url=https://gamedistribution.com/games/vex-x3m";
+        var urlX3M = "https://motox3m.gitlab.io/core-games/vex-x3m/";
         if (urlX3M) {
             var winX3M;
  
@@ -294,36 +293,6 @@
                         if (winX3M.closed) {
                             clearInterval(interval);
                             winX3M = undefined;
-                        }
-                    }, 500);
-                }
-            };
-        }
-
-        // Vex X3M 2 Game
-        var urlX3M2 = "https://html5.gamedistribution.com/faf4cfc80f8049f78e1ade958e5332a4/?gd_sdk_referrer_url=https://gamedistribution.com/games/vex-x3m-2/";
-        if (urlX3M2) {
-            var winX3M2;
- 
-            document.querySelector('#vexX3M2').onclick = function() {
-                if (winX3M2) {
-                    winX3M2.focus();
-                } else {
-                    winX3M2 = window.open();
-                    winX3M2.document.body.style.margin = '0';
-                    winX3M2.document.body.style.height = '100vh';
-                    var iframe = winX3M2.document.createElement('iframe');
-                    iframe.style.border = 'none';
-                    iframe.style.width = '100%';
-                    iframe.style.height = '100%';
-                    iframe.style.margin = '0';
-                    iframe.src = urlX3M2;
-                    winX3M2.document.body.appendChild(iframe);
- 
-                    var interval = setInterval(function() {
-                        if (winX3M2.closed) {
-                            clearInterval(interval);
-                            winX3M2 = undefined;
                         }
                     }, 500);
                 }
