@@ -1,86 +1,95 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MK AI Platform</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <title>Ikhouvankaas.github.io</title>
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 50px 20px;
+        }
+        
+        .title {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 0.9em;
+            color: #cccccc;
+            margin-bottom: 50px;
+        }
+        
+        .language-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .language-btn {
+            background-color: #333;
+            color: white;
+            border: 2px solid #555;
+            padding: 15px 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .language-btn:hover {
+            background-color: #555;
+            border-color: #777;
+        }
+        
+        .btn-main-text {
+            display: block;
+            font-weight: bold;
+        }
+        
+        .btn-sub-text {
+            display: block;
+            font-size: 0.8em;
+            color: #aaa;
+            margin-top: 3px;
+        }
+    </style>
 </head>
 <body>
-    <div class="app-container" x-data="{ activeTool: 'chat', darkMode: true }" :class="{ 'dark-mode': darkMode, 'light-mode': !darkMode }">
-        <aside class="sidebar">
-            <div class="logo">
-                <h1>MK AI</h1>
-            </div>
-            <nav class="tools-menu">
-                <button 
-                    @click="activeTool = 'chat'" 
-                    :class="{ 'active': activeTool === 'chat' }"
-                >
-                    <i class="icon-chat"></i> Chatbot
-                </button>
-                <button 
-                    @click="activeTool = 'images'" 
-                    :class="{ 'active': activeTool === 'images' }"
-                >
-                    <i class="icon-image"></i> Image Generator
-                </button>
-                <button 
-                    @click="darkMode = !darkMode" 
-                    class="theme-toggle"
-                >
-                    <i x-text="darkMode ? '☀️' : '🌙'"></i> 
-                    Toggle Theme
-                </button>
-            </nav>
-        </aside>
-
-        <main class="main-content">
-            <div x-show="activeTool === 'chat'" class="tool-content">
-                <div class="chat-header">
-                    <h2>AI Chatbot</h2>
-                </div>
-                <div class="chat-interface">
-                    <div id="chat-messages" class="chat-messages"></div>
-                    <div class="chat-input-area">
-                        <input 
-                            type="text" 
-                            id="chat-input" 
-                            placeholder="Type your message..."
-                        >
-                        <button id="send-message">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div x-show="activeTool === 'images'" class="tool-content image-generator-container">
-                <div class="image-generator-header">
-                    <h2>Image Generator</h2>
-                </div>
-                <div class="image-generator">
-                    <div class="image-generator-controls">
-                        <input 
-                            type="text" 
-                            id="image-prompt" 
-                            placeholder="Enter image description..."
-                        >
-                        <select id="image-style">
-                            <option value="realistic">Realistic</option>
-                            <option value="vector">Vector</option>
-                            <option value="drawing">Drawing</option>
-                        </select>
-                        <button id="generate-image">Generate Image</button>
-                    </div>
-                    <div id="generated-image-container" class="generated-image-container">
-                        <img id="generated-image" src="" alt="Generated Image" style="display:none;">
-                        <p id="image-loading" class="loading-text" style="display:none;">Generating image...</p>
-                    </div>
-                </div>
-            </div>
-        </main>
+    <h1 class="title">Ikhouvankaas.github.io</h1>
+    <p class="subtitle">Fun or cool thing to test! (including games)</p>
+    
+    <div class="language-buttons">
+        <button class="language-btn" onclick="selectLanguage('dutch')">
+            <span class="btn-main-text">Nederlands</span>
+            <span class="btn-sub-text">Dutch</span>
+        </button>
+        
+        <button class="language-btn" onclick="selectLanguage('english')">
+            <span class="btn-main-text">English</span>
+        </button>
     </div>
-    <script src="app.js"></script>
+
+    <script>
+        function selectLanguage(language) {
+            if (language === 'dutch') {
+                alert('Nederlandse versie geselecteerd!');
+                // You can redirect to a Dutch page or load Dutch content here
+                // window.location.href = 'dutch.html';
+            } else if (language === 'english') {
+                alert('English version selected!');
+                // You can redirect to an English page or load English content here
+                // window.location.href = 'english.html';
+            }
+        }
+    </script>
 </body>
 </html>
