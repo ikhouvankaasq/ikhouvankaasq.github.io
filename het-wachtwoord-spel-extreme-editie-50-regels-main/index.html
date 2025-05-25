@@ -1,0 +1,361 @@
+
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Het Wachtwoord Spel - Extreme Editie</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .game-area {
+            padding: 30px;
+        }
+        
+        .password-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            border: 3px solid #e0e0e0;
+            border-radius: 12px;
+            outline: none;
+            transition: all 0.3s ease;
+            font-family: 'Courier New', monospace;
+            background: #fafafa;
+            min-height: 80px;
+            resize: vertical;
+        }
+        
+        .password-input:focus {
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .rules-container {
+            margin-top: 30px;
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        
+        .rule {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+            font-size: 14px;
+        }
+        
+        .rule.pending {
+            background: #ffffff;
+            border-left-color: #dee2e6;
+        }
+        
+        .rule.valid {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+        
+        .rule.invalid {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        @keyframes shake {
+            0%, 20%, 40%, 60%, 80% { transform: translateX(-3px); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(3px); }
+            100% { transform: translateX(0); }
+        }
+        
+        .rule-icon {
+            font-size: 16px;
+            margin-right: 10px;
+            margin-top: 2px;
+            min-width: 16px;
+        }
+        
+        .rule-text {
+            flex: 1;
+            line-height: 1.4;
+        }
+        
+        .rule-number {
+            background: #667eea;
+            color: white;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+            margin-right: 10px;
+            min-width: 22px;
+        }
+        
+        .progress-bar {
+            margin-top: 20px;
+            background: #e9ecef;
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            transition: width 0.5s ease;
+            border-radius: 5px;
+        }
+        
+        .progress-text {
+            text-align: center;
+            margin-top: 10px;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .victory {
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border-radius: 15px;
+            margin-top: 20px;
+            animation: celebration 1s ease-in-out;
+        }
+        
+        @keyframes celebration {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .victory h2 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .emoji-large {
+            font-size: 3em;
+            margin: 10px 0;
+        }
+        
+        .password-length {
+            text-align: center;
+            margin-top: 10px;
+            color: #6c757d;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Het Wachtwoord Spel</h1>
+            <p>Extreme Editie - 50 Regels!</p>
+        </div>
+        
+        <div class="game-area">
+            <textarea id="passwordInput" class="password-input" placeholder="Begin hier met typen..."></textarea>
+            <div class="password-length" id="passwordLength">0 tekens</div>
+            
+            <div class="rules-container" id="rulesContainer">
+                <!-- Rules will be populated by JavaScript -->
+            </div>
+            
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+            <div class="progress-text" id="progressText">0 van 50 regels voltooid</div>
+            
+            <div id="victoryMessage" class="victory" style="display: none;">
+                <div class="emoji-large">🧙‍♂️✨🔮</div>
+                <h2>GEFELICITEERD, WACHTWOORD WIZARD!</h2>
+                <p>Je hebt alle 50 regels gemeesterd!</p>
+                <p>Je bent nu officieel een Wachtwoord Wizard! 🧙‍♂️</p>
+                <div style="margin-top: 15px; font-size: 0.9em; opacity: 0.9;">
+                    <strong>Je magische wachtwoord heeft <span id="finalLength"></span> tekens!</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const rules = [
+            { id: 1, text: "Je wachtwoord moet minstens 5 tekens bevatten", check: (p) => p.length >= 5 },
+            { id: 2, text: "Je wachtwoord moet een cijfer bevatten", check: (p) => /\d/.test(p) },
+            { id: 3, text: "Je wachtwoord moet een hoofdletter bevatten", check: (p) => /[A-Z]/.test(p) },
+            { id: 4, text: "Je wachtwoord moet een kleine letter bevatten", check: (p) => /[a-z]/.test(p) },
+            { id: 5, text: "Je wachtwoord moet een speciaal teken bevatten (!@#$%^&*)", check: (p) => /[!@#$%^&*]/.test(p) },
+            { id: 6, text: "Je wachtwoord moet een Nederlandse maand bevatten", check: (p) => ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'].some(m => p.toLowerCase().includes(m)) },
+            { id: 7, text: "Je wachtwoord moet een Nederlandse stad bevatten", check: (p) => ['amsterdam', 'rotterdam', 'utrecht', 'eindhoven', 'tilburg', 'groningen', 'almere', 'breda', 'nijmegen', 'enschede', 'haarlem', 'arnhem', 'hertogenbosch', 'amersfoort', 'apeldoorn', 'zwolle'].some(c => p.toLowerCase().includes(c)) },
+            { id: 8, text: "Je wachtwoord moet een kleur bevatten", check: (p) => ['rood', 'blauw', 'groen', 'geel', 'oranje', 'paars', 'roze', 'zwart', 'wit', 'grijs', 'bruin', 'turquoise', 'violet', 'cyan', 'magenta'].some(c => p.toLowerCase().includes(c)) },
+            { id: 9, text: "Je wachtwoord moet een dier bevatten", check: (p) => ['hond', 'kat', 'vogel', 'vis', 'paard', 'koe', 'varken', 'schaap', 'geit', 'konijn', 'muis', 'rat', 'leeuw', 'tijger', 'olifant', 'aap', 'beer', 'wolf', 'vos', 'uil', 'zebra', 'giraf', 'neushoorn'].some(a => p.toLowerCase().includes(a)) },
+            { id: 10, text: "Je wachtwoord moet minstens 15 tekens lang zijn", check: (p) => p.length >= 15 },
+            { id: 11, text: "Je wachtwoord moet een voedsel bevatten", check: (p) => ['pizza', 'pasta', 'brood', 'kaas', 'melk', 'appel', 'banaan', 'tomaat', 'wortel', 'ui', 'aardappel', 'rijst', 'vlees', 'vis', 'ei', 'chocola', 'koek', 'taart', 'soep', 'salade', 'hagelslag', 'drop', 'ontbijtkoek', 'beschuit', 'pindakaas', 'vla', 'yoghurt', 'haring', 'kibbeling', 'frikandel'].some(f => p.toLowerCase().includes(f)) },
+            { id: 12, text: "Je wachtwoord moet een dagdeel bevatten (ochtend, middag, avond, nacht)", check: (p) => ['ochtend', 'middag', 'avond', 'nacht'].some(t => p.toLowerCase().includes(t)) },
+            { id: 13, text: "Je wachtwoord moet een Nederlands gebergte/rivier bevatten", check: (p) => ['rijn', 'maas', 'ijssel', 'waal', 'lek', 'vecht', 'zaan', 'amstel', 'heuvelrug', 'veluwe', 'ardennes', 'limburg'].some(g => p.toLowerCase().includes(g)) },
+            { id: 14, text: "Je wachtwoord moet een seizoen bevatten", check: (p) => ['lente', 'zomer', 'herfst', 'winter'].some(s => p.toLowerCase().includes(s)) },
+            { id: 15, text: "Je wachtwoord moet een Nederlandse provincie bevatten", check: (p) => ['groningen', 'friesland', 'drenthe', 'overijssel', 'flevoland', 'gelderland', 'utrecht', 'noordholland', 'zuidholland', 'zeeland', 'brabant', 'limburg'].some(pr => p.toLowerCase().includes(pr)) },
+            { id: 16, text: "Je wachtwoord moet een muziekinstrument bevatten", check: (p) => ['piano', 'gitaar', 'drums', 'viool', 'fluit', 'trompet', 'saxofoon', 'bas', 'orgel', 'harp', 'cello', 'klarinet', 'trombone'].some(i => p.toLowerCase().includes(i)) },
+            { id: 17, text: "Je wachtwoord moet een sport bevatten", check: (p) => ['voetbal', 'tennis', 'hockey', 'basketbal', 'volleybal', 'zwemmen', 'fietsen', 'hardlopen', 'skiën', 'golf', 'rugby', 'cricket', 'badminton', 'tafeltennis'].some(s => p.toLowerCase().includes(s)) },
+            { id: 18, text: "Je wachtwoord moet een emotie bevatten", check: (p) => ['blij', 'verdrietig', 'boos', 'bang', 'opgewonden', 'nerveus', 'kalm', 'gelukkig', 'teleurgesteld', 'trots', 'jaloers', 'verliefd', 'eenzaam'].some(e => p.toLowerCase().includes(e)) },
+            { id: 19, text: "Je wachtwoord moet een Nederlands traditioneel gerecht bevatten", check: (p) => ['stamppot', 'erwtensoep', 'hutspot', 'boerenkool', 'hachee', 'gehaktbal', 'kroket', 'bitterballen', 'stroopwafel', 'poffertjes', 'pannenkoek', 'oliebollen'].some(d => p.toLowerCase().includes(d)) },
+            { id: 20, text: "Je wachtwoord moet minstens 25 tekens lang zijn", check: (p) => p.length >= 25 },
+            { id: 21, text: "Je wachtwoord moet een Nederlands kasteel/attractie bevatten", check: (p) => ['muiderslot', 'keukenhof', 'zaanse', 'schans', 'kinderdijk', 'giethoorn', 'marken', 'volendam', 'edam', 'alkmaar', 'hoorn', 'kasteel', 'paleis', 'slot'].some(c => p.toLowerCase().includes(c)) },
+            { id: 22, text: "Je wachtwoord moet een planeet bevatten", check: (p) => ['mercurius', 'venus', 'aarde', 'mars', 'jupiter', 'saturnus', 'uranus', 'neptunus', 'pluto'].some(pl => p.toLowerCase().includes(pl)) },
+            { id: 23, text: "Je wachtwoord moet een Nederlands museum bevatten", check: (p) => ['rijksmuseum', 'vangogh', 'stedelijk', 'boijmans', 'krollermuller', 'mauritshuis', 'anne', 'frank', 'verzetsmuseum', 'nemo', 'openluchtmuseum', 'spoorwegmuseum', 'scheepvaartmuseum', 'naturalis', 'kunsthal'].some(m => p.toLowerCase().includes(m)) },
+            { id: 24, text: "Je wachtwoord moet een Nederlandse tv-zender bevatten", check: (p) => ['npo', 'rtl', 'sbs', 'net5', 'veronica', 'comedy', 'discovery', 'national', 'geographic'].some(tv => p.toLowerCase().includes(tv)) },
+            { id: 25, text: "Je wachtwoord moet een weersgesteldheid bevatten", check: (p) => ['zon', 'regen', 'sneeuw', 'wind', 'storm', 'mist', 'hagel', 'bliksem', 'donder', 'bewolkt', 'helder', 'druilerig'].some(w => p.toLowerCase().includes(w)) },
+            { id: 26, text: "Je wachtwoord moet een Nederlands eiland bevatten", check: (p) => ['texel', 'vlieland', 'terschelling', 'ameland', 'schiermonnikoog', 'goeree', 'schouwen', 'walcheren', 'marken', 'urk'].some(i => p.toLowerCase().includes(i)) },
+            { id: 27, text: "Je wachtwoord moet een Nederlands volkslied woord bevatten", check: (p) => ['wilhelmus', 'nassouwe', 'duitsen', 'bloed', 'vaderland', 'getrouwe', 'blijf', 'leven', 'koning', 'eer'].some(n => p.toLowerCase().includes(n)) },
+            { id: 28, text: "Je wachtwoord moet een Nederlands feest bevatten", check: (p) => ['koningsdag', 'sinterklaas', 'kerst', 'pasen', 'pinksteren', 'bevrijdingsdag', 'dodenherdenking', 'nieuwjaar', 'carnaval', 'halloween'].some(f => p.toLowerCase().includes(f)) },
+            { id: 29, text: "Je wachtwoord moet een Nederlandse bloem bevatten", check: (p) => ['tulp', 'narcis', 'hyacint', 'crocus', 'dahlia', 'roos', 'zonnebloem', 'lelie', 'iris', 'chrysant', 'begonia', 'petunia'].some(bl => p.toLowerCase().includes(bl)) },
+            { id: 30, text: "Je wachtwoord moet minstens 35 tekens lang zijn", check: (p) => p.length >= 35 },
+            { id: 31, text: "Je wachtwoord moet een Nederlands bedrijf bevatten", check: (p) => ['philips', 'shell', 'unilever', 'heineken', 'ing', 'rabobank', 'ahold', 'tomtom', 'asml', 'booking', 'hema', 'etos', 'kruidvat', 'blokker', 'mediamarkt', 'coolblue', 'wehkamp', 'zalando', 'jumbo', 'albert', 'heijn', 'lidl', 'aldi', 'action', 'zeeman', 'primark', 'bijenkorf', 'vd', 'valk'].some(b => p.toLowerCase().includes(b)) },
+            { id: 32, text: "Je wachtwoord moet een Nederlands dialect woord bevatten", check: (p) => ['houdoe', 'alaaf', 'helau', 'mooi', 'lekker', 'gezellig', 'doe', 'maar', 'normaal', 'borrelen', 'knallen', 'gappen'].some(d => p.toLowerCase().includes(d)) },
+            { id: 33, text: "Je wachtwoord moet een Nederlandse universiteit bevatten", check: (p) => ['leiden', 'utrecht', 'groningen', 'amsterdam', 'rotterdam', 'eindhoven', 'delft', 'wageningen', 'tilburg', 'maastricht', 'nijmegen', 'twente'].some(u => p.toLowerCase().includes(u)) },
+            { id: 34, text: "Je wachtwoord moet een Nederlands natuurgebied bevatten", check: (p) => ['veluwe', 'hoge', 'keukenhof', 'biesbosch', 'waddenzee', 'zaanse', 'schans', 'kinderdijk', 'giethoorn', 'efteling', 'nationaal'].some(n => p.toLowerCase().includes(n)) },
+            { id: 35, text: "Je wachtwoord moet een Nederlandse munt bevatten (historisch)", check: (p) => ['gulden', 'cent', 'dubbeltje', 'kwartje', 'stuiver', 'daalder', 'rijksdaalder', 'euro'].some(m => p.toLowerCase().includes(m)) },
+            { id: 36, text: "Je wachtwoord moet een Nederlandse uitdrukking bevatten", check: (p) => ['gezellig', 'lekker', 'houdoe', 'doei', 'hallo', 'dank', 'je', 'wel', 'alsjeblieft', 'sorry', 'excuus', 'natuurlijk', 'precies', 'inderdaad'].some(ui => p.toLowerCase().includes(ui)) },
+            { id: 37, text: "Je wachtwoord moet een Nederlandse wielrenner bevatten", check: (p) => ['dumoulin', 'groenewegen', 'kruijswijk', 'mollema', 'van der poel', 'van aert', 'van vleuten', 'vos', 'van dijk', 'pieters', 'jansen', 'van der breggen'].some(w => p.toLowerCase().includes(w)) },
+            { id: 38, text: "Je wachtwoord moet een Nederlandse krant bevatten", check: (p) => ['telegraaf', 'volkskrant', 'trouw', 'nrc', 'parool', 'metro', 'spits', 'nieuwsblad', 'dagblad', 'brabants'].some(k => p.toLowerCase().includes(k)) },
+            { id: 39, text: "Je wachtwoord moet een Nederlandse snelweg bevatten", check: (p) => /[aA]\d+/.test(p) || ['ring', 'snelweg', 'autoweg', 'bypass'].some(s => p.toLowerCase().includes(s)) },
+            { id: 40, text: "Je wachtwoord moet minstens 45 tekens lang zijn", check: (p) => p.length >= 45 },
+            { id: 41, text: "Je wachtwoord moet een emoji bevatten 🚀", check: (p) => /\p{Emoji}/u.test(p) },
+            { id: 42, text: "Je wachtwoord moet het woord 'Nederland' bevatten", check: (p) => p.toLowerCase().includes('nederland') },
+            { id: 43, text: "Je wachtwoord moet een Nederlandse voetbalclub bevatten", check: (p) => ['ajax', 'feyenoord', 'psv', 'vitesse', 'utrecht', 'groningen', 'heerenveen', 'ado', 'fortuna', 'excelsior', 'sparta', 'twente'].some(fc => p.toLowerCase().includes(fc)) },
+            { id: 44, text: "Je wachtwoord moet een Nederlands koningshuis lid bevatten", check: (p) => ['willem', 'alexander', 'maxima', 'amalia', 'alexia', 'ariane', 'beatrix', 'claus', 'juliana', 'bernhard'].some(r => p.toLowerCase().includes(r)) },
+            { id: 45, text: "Je wachtwoord moet een Nederlandse tv-presentator bevatten", check: (p) => ['linda', 'humberto', 'chantal', 'matthijs', 'beau', 'jinek', 'pauw', 'witteman', 'giel', 'beakmans', 'benjamin', 'kat'].some(pr => p.toLowerCase().includes(pr)) },
+            { id: 46, text: "Je wachtwoord moet een Nederlandse band/artiest bevatten", check: (p) => ['caro', 'emerald', 'golden', 'earring', 'doe', 'maar', 'klein', 'orkest', 'volumia', 'chef', 'special', 'kensington', 'goldband', 'froukje', 'meau', 'suzan', 'freek'].some(ba => p.toLowerCase().includes(ba)) },
+            { id: 47, text: "Je wachtwoord moet een Nederlands attractiepark bevatten", check: (p) => ['efteling', 'walibi', 'attractiepark', 'slagharen', 'toverland', 'duinrell', 'linnaeushof', 'drievliet', 'julianatoren'].some(ap => p.toLowerCase().includes(ap)) },
+            { id: 48, text: "Je wachtwoord moet een Nederlandse app/website bevatten", check: (p) => ['marktplaats', 'buienradar', 'thuisbezorgd', 'coolblue', 'wehkamp', 'hema', 'etos', 'kruidvat', 'blokker', 'mediamarkt', 'gamma', 'karwei', 'praxis', 'hornbach', 'ikea', 'jysk', 'mellekoster'].some(app => p.toLowerCase().includes(app)) },
+            { id: 49, text: "Je wachtwoord moet minstens 60 tekens lang zijn", check: (p) => p.length >= 60 },
+            { id: 50, text: "Je wachtwoord moet eindigen met een uitroepteken (!)", check: (p) => p.endsWith('!') }
+        ];
+
+        function getIcon(ruleState) {
+            switch (ruleState) {
+                case 'valid': return '✅';
+                case 'invalid': return '❌';
+                default: return '⏳';
+            }
+        }
+
+        function updateRules(password) {
+            const container = document.getElementById('rulesContainer');
+            container.innerHTML = '';
+            
+            let validCount = 0;
+            let currentRuleIndex = 0;
+            
+            // Find the first invalid rule or show all if all are valid
+            for (let i = 0; i < rules.length; i++) {
+                if (rules[i].check(password)) {
+                    validCount++;
+                } else {
+                    currentRuleIndex = i;
+                    break;
+                }
+            }
+            
+            // Show only the last 2 completed rules + current invalid rule
+            const startIndex = Math.max(0, currentRuleIndex - 2);
+            const rulesToShow = validCount === rules.length ? 
+                Math.max(rules.length - 3, 0) : // Show last 3 when complete
+                startIndex;
+            const endIndex = validCount === rules.length ? 
+                rules.length : 
+                currentRuleIndex + 1;
+            
+            for (let i = rulesToShow; i < endIndex; i++) {
+                const rule = rules[i];
+                const isValid = rule.check(password);
+                const state = isValid ? 'valid' : (password.length > 0 ? 'invalid' : 'pending');
+                
+                const ruleElement = document.createElement('div');
+                ruleElement.className = `rule ${state}`;
+                ruleElement.innerHTML = `
+                    <div class="rule-number">${rule.id}</div>
+                    <div class="rule-icon">${getIcon(state)}</div>
+                    <div class="rule-text">${rule.text}</div>
+                `;
+                container.appendChild(ruleElement);
+            }
+            
+            // Update progress
+            const progressPercent = (validCount / rules.length) * 100;
+            document.getElementById('progressFill').style.width = `${progressPercent}%`;
+            document.getElementById('progressText').textContent = `${validCount} van ${rules.length} regels voltooid`;
+            
+            // Update password length
+            document.getElementById('passwordLength').textContent = `${password.length} tekens`;
+            
+            // Check for victory
+            if (validCount === rules.length) {
+                document.getElementById('victoryMessage').style.display = 'block';
+                document.getElementById('finalLength').textContent = password.length;
+            } else {
+                document.getElementById('victoryMessage').style.display = 'none';
+            }
+        }
+
+        // Initialize
+        document.getElementById('passwordInput').addEventListener('input', (e) => {
+            updateRules(e.target.value);
+        });
+
+        // Show first few rules initially
+        updateRules('');
+    </script>
+</body>
+</html>
+
