@@ -1,0 +1,143 @@
+:root{
+  --bg:#0b0b0b;
+  --panel:#0f0f10;
+  --muted:#9aa0a6;
+  --accent:#39ff14; /* subtle green for "hacker" feel */
+  --glass: rgba(255,255,255,0.02);
+  --card:#111214;
+  font-synthesis: none;
+}
+
+*{box-sizing:border-box}
+html,body,#app{height:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:#e6e6e6;
+  font-family: "Space Mono", monospace;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
+}
+
+/* Topbar */
+.topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px 18px;
+  border-bottom:1px solid rgba(255,255,255,0.03);
+  background:linear-gradient(0deg, rgba(255,255,255,0.01), transparent);
+}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-dot{
+  width:12px;height:12px;border-radius:3px;background:var(--accent);box-shadow:0 0 8px rgba(57,255,20,0.12);
+}
+.logo-text{font-weight:700;letter-spacing:0.6px}
+
+.nav-actions .ghost{
+  background:none;border:1px solid rgba(255,255,255,0.04);color:var(--muted);padding:8px 12px;border-radius:6px;cursor:pointer;font-family:inherit;
+}
+.nav-actions .ghost:hover{border-color:rgba(57,255,20,0.12);color:#cfeccd}
+
+/* Layout */
+.container{
+  display:flex;
+  gap:20px;
+  padding:22px;
+  flex:1;
+}
+.sidebar{
+  width:220px;
+  background:var(--panel);
+  border-radius:8px;
+  padding:16px;
+  border:1px solid rgba(255,255,255,0.03);
+  height:calc(100vh - 150px);
+  overflow:auto;
+}
+.sidebar h3{margin:0 0 12px 0;color:var(--muted);font-weight:700;font-family:Inter, sans-serif}
+.category-list{display:flex;flex-direction:column;gap:8px}
+
+/* Category buttons styled like system chips/buttons */
+.cat-btn{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:10px 12px;
+  background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);
+  border-radius:6px;
+  border:1px solid rgba(255,255,255,0.02);
+  cursor:pointer;
+  color:#e8f8e7;
+  font-size:14px;
+  transition:transform 120ms ease, box-shadow 120ms;
+}
+.cat-btn .name{flex:1;text-align:left}
+.cat-btn:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,0.6)}
+.cat-btn.empty{opacity:0.7;color:var(--muted)}
+.cat-badge{background:rgba(255,255,255,0.03);padding:4px 8px;border-radius:99px;font-size:12px;color:var(--muted)}
+.cat-badge.live{background:rgba(57,255,20,0.06);color:var(--accent);font-weight:700;border:1px solid rgba(57,255,20,0.06)}
+
+/* Content */
+.content{
+  flex:1;
+  min-height:400px;
+}
+.breadcrumb{
+  color:var(--muted);
+  font-size:13px;
+  margin-bottom:12px;
+  font-family:Inter, sans-serif;
+}
+
+.page{
+  background:var(--card);
+  border-radius:10px;
+  padding:20px;
+  min-height:320px;
+  border:1px solid rgba(255,255,255,0.03);
+  box-shadow: 0 6px 30px rgba(0,0,0,0.6);
+}
+
+/* Home grid */
+.grid{
+  display:grid;
+  grid-template-columns: repeat(auto-fill,minmax(220px,1fr));
+  gap:14px;
+}
+.card{
+  background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);
+  border-radius:8px;padding:14px;border:1px solid rgba(255,255,255,0.02);
+  display:flex;flex-direction:column;gap:8px;
+}
+.card h4{margin:0;font-size:15px}
+.card p{margin:0;color:var(--muted);font-size:13px}
+.card .actions{margin-top:auto;display:flex;gap:8px}
+.btn{
+  padding:8px 10px;border-radius:6px;border:0;cursor:pointer;font-family:inherit;font-weight:700;
+}
+.btn.primary{background:var(--accent);color:#050505}
+.btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)}
+
+/* Message */
+.message{
+  padding:28px;text-align:center;color:var(--muted);
+  display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center;
+  height:260px;
+}
+.message strong{color:#fff;font-size:18px}
+
+/* Footer */
+.footer{padding:12px 22px;text-align:center;color:var(--muted);border-top:1px solid rgba(255,255,255,0.02)}
+
+/* Responsive */
+@media (max-width:800px){
+  .container{flex-direction:column;padding:12px}
+  .sidebar{width:100%;height:auto;order:2}
+  .content{order:1}
+}
+
