@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WIDM // SYSTEEM</title>
+    <style>
+        :root {
+            --widm-green: #00ff41;
+            --widm-red: #ff0000;
+            --widm-bg: #050505;
+            --widm-font: 'Courier New', Courier, monospace;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background-color: var(--widm-bg);
+            color: var(--widm-green);
+            font-family: var(--widm-font);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-transform: uppercase;
+        }
+
+        /* Matrix Scanlines */
+        body::after {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2) 1px, transparent 1px, transparent 2px);
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .container {
+            z-index: 10;
+            width: 100%;
+            max-width: 800px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .hidden { display: none !important; }
+
+        /* --- KANDIDAAT SCHERM STIJL --- */
+        h1.glitch {
+            font-size: 3rem;
+            letter-spacing: 15px;
+            margin-bottom: 60px;
+            text-shadow: 0 0 10px var(--widm-green);
+        }
+
+        #kandidaat-input {
+            background: transparent;
+            border: none;
+            border-bottom: 4px solid var(--widm-green);
+            color: var(--widm-green);
+            font-family: var(--widm-font);
+            font-size: 4rem; 
+            width: 100%;
+            text-align: center;
+            outline: none;
+            text-transform: uppercase;
+            font-weight: bold;
+            caret-color: transparent; /* Verberg standaard cursor voor vette Matrix look */
+        }
+
+        /* --- ADMIN & AUTH STIJL --- */
+        .admin-box {
+            background: #001100;
+            border: 1px solid var(--widm-green);
+            padding: 30px;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
+            width: 100%;
+        }
+
+        .input-field {
+            display: block; width: 100%; margin-bottom: 15px;
+            background: #000; border: 1px solid #004400; color: var(--widm-green); 
+            padding: 12px; font-family: var(--widm-font); outline: none;
+        }
+
+        button {
+            cursor: pointer; border: 1px solid var(--widm-green);
+            background: transparent; color: var(--widm-green);
+            padding: 10px 20px; font-family: var(--widm-font);
+            text-transform: uppercase; transition: 0.2s;
+        }
+        
+        button:hover { background: var(--widm-green); color: #000; }
+
+        .speler-rij {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #003300; padding: 10px 0;
+        }
+
+        /* --- OVERLAYS --- */
+        #overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1000; display: flex; justify-content: center; align-items: center;
+        }
+        .bg-green { background-color: #00ff00; }
+        .bg-red { background-color: #ff0000; }
+
+        .big-name { font-size: 5rem; color: #000; font-weight: bold; }
+        .red-text { color: #fff; text-shadow: 0 0 20px #000; }
+
+    </style>
+</head>
+<body>
+
+    <div id="view-kandidaat" class="container">
+        <h1 class="glitch">EXECUTIE</h1>
+        <div id="status-msg" style="margin-bottom: 20px; color: #008800;">SYSTEEM GEREED // VOER NAAM IN</div>
+        <input type="text" id="kandidaat-input" autocomplete="off" spellcheck="false">
+        <p style="margin-top: 40px; color: #004400; font-size: 0.8rem;">[ ENTER ] OM RESULTAAT TE LADEN</p>
+    </div>
+
+    <div id="view-auth" class="container hidden">
+        <div class="admin-box">
+            <h2>BEHEERDER TOEGANG</h2>
+            <input type="email" id="email" class="input-field" placeholder="EMAIL">
+            <input type="password" id="pass" class="input-field" placeholder="WACHTWOORD">
+            <button onclick="login()">LOGIN</button>
+            <button onclick="register()">REGISTREER</button>
+        </div>
+    </div>
+
+    <div id="view-admin" class="container hidden">
+        <div class="admin-box">
+            <div style="display:flex; justify-content:space-between; margin-bottom: 20px;">
+                <span>MOL-CONTROLEPANEEL</span>
+                <button onclick="logout()" style="color:red; border-color:red;">LOG UIT</button>
+            </div>
+            <div style="display:flex; gap: 10px; margin-bottom: 30px;">
+                <input type="text" id="admin-naam" class="input-field" placeholder="NIEUWE KANDIDAAT NAAM" style="margin:0;">
+                <button onclick="addSpeler()">VOEG TOE</button>
+            </div>
+            <div id="spelers-lijst"></div>
+        </div>
+    </div>
+
+    <div id="overlay" class="hidden">
+        <div id="overlay-naam-box" class="big-name"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, query, where, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAAKZk7FivQAdv5tVlMqQrcqFC6X287JWc",
+            authDomain: "wie-is-de-mol-30aad.firebaseapp.com",
+            projectId: "wie-is-de-mol-30aad",
+            storageBucket: "wie-is-de-mol-30aad.firebasestorage.app",
+            messagingSenderId: "484393645764",
+            appId: "1:484393645764:web:f93aac49d32a31428dbb91",
+            measurementId: "G-EJT6PD5W1D"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUnsubscribe = null;
+        let loggedInUser = null;
+
+        // --- AUTH TRACKER ---
+        onAuthStateChanged(auth, (user) => {
+            loggedInUser = user;
+            if (user) {
+                console.log("Ingelogd als:", user.email);
+                laadLijst();
+            }
+        });
+
+        // --- KEYBIND FIX (Rechts Control + 0) ---
+        document.addEventListener('keydown', (e) => {
+            // Check voor Right Control (code: ControlRight) en de toets '0'
+            if (e.code === 'ControlRight' && e.key === '0') {
+                e.preventDefault();
+                toggleAdminView();
+            }
+        });
+
+        function toggleAdminView() {
+            const kandidaatView = document.getElementById('view-kandidaat');
+            const authView = document.getElementById('view-auth');
+            const adminView = document.getElementById('view-admin');
+
+            // Als we nu op het kandidaat scherm zijn:
+            if (!kandidaatView.classList.contains('hidden')) {
+                kandidaatView.classList.add('hidden');
+                if (loggedInUser) {
+                    adminView.classList.remove('hidden');
+                } else {
+                    authView.classList.remove('hidden');
+                }
+            } else {
+                // We zijn in Admin of Auth, ga terug naar Kandidaat
+                adminView.classList.add('hidden');
+                authView.classList.add('hidden');
+                kandidaatView.classList.remove('hidden');
+                document.getElementById('kandidaat-input').focus();
+            }
+        }
+
+        // --- AUTO-FOCUS ---
+        // Zorg dat de kandidaat altijd kan typen
+        setInterval(() => {
+            const kInput = document.getElementById('kandidaat-input');
+            const kView = document.getElementById('view-kandidaat');
+            if (!kView.classList.contains('hidden') && document.activeElement !== kInput) {
+                kInput.focus();
+            }
+        }, 500);
+
+        // --- KANDIDAAT ACTIE ---
+        const kInput = document.getElementById('kandidaat-input');
+        kInput.addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter') {
+                const naam = kInput.value.trim().toUpperCase();
+                if (!naam) return;
+
+                document.getElementById('status-msg').innerText = "BEZIG MET VERWERKEN...";
+
+                const q = query(collection(db, "spelers"), where("naam", "==", naam));
+                const snapshot = await getDocs(q);
+
+                if (snapshot.empty) {
+                    document.getElementById('status-msg').innerHTML = "<span style='color:red'>FOUT: ONBEKENDE IDENTITEIT</span>";
+                    kInput.value = "";
+                    return;
+                }
+
+                document.getElementById('status-msg').innerText = "ID GEACCEPTEERD. WACHT OP SYSTEEM...";
+
+                if (currentUnsubscribe) currentUnsubscribe();
+                currentUnsubscribe = onSnapshot(q, (snap) => {
+                    snap.forEach(d => {
+                        const res = d.data().status;
+                        if (res === 'groen' || res === 'rood') toonScherm(naam, res);
+                    });
+                });
+            }
+        });
+
+        function toonScherm(naam, kleur) {
+            const overlay = document.getElementById('overlay');
+            const box = document.getElementById('overlay-naam-box');
+            
+            overlay.classList.remove('hidden');
+            box.innerText = naam;
+            
+            if (kleur === 'groen') {
+                overlay.className = 'bg-green';
+                box.classList.remove('red-text');
+            } else {
+                overlay.className = 'bg-red';
+                box.classList.add('red-text');
+            }
+
+            if (currentUnsubscribe) currentUnsubscribe();
+
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                kInput.value = "";
+                document.getElementById('status-msg').innerText = "SYSTEEM GEREED // VOER NAAM IN";
+            }, 6000);
+        }
+
+        // --- ADMIN FUNCTIES ---
+        window.addSpeler = async () => {
+            const v = document.getElementById('admin-naam');
+            const n = v.value.trim().toUpperCase();
+            if (!n) return;
+            await addDoc(collection(db, "spelers"), { naam: n, status: "pending" });
+            v.value = "";
+        };
+
+        function laadLijst() {
+            onSnapshot(collection(db, "spelers"), (snap) => {
+                const lijst = document.getElementById('spelers-lijst');
+                lijst.innerHTML = "";
+                snap.forEach(d => {
+                    const data = d.data();
+                    lijst.innerHTML += `
+                        <div class="speler-rij">
+                            <span>${data.naam}</span>
+                            <div>
+                                <button onclick="setStat('${d.id}', 'groen')">GROEN</button>
+                                <button onclick="setStat('${d.id}', 'rood')" style="border-color:red; color:red;">ROOD</button>
+                                <button onclick="setStat('${d.id}', 'pending')">RESET</button>
+                                <button onclick="del('${d.id}')" style="border:none; opacity:0.5;">X</button>
+                            </div>
+                        </div>`;
+                });
+            });
+        }
+
+        window.setStat = async (id, s) => await updateDoc(doc(db, "spelers", id), { status: s });
+        window.del = async (id) => { if(confirm("Verwijderen?")) await deleteDoc(doc(db, "spelers", id)); };
+
+        // --- AUTH ---
+        window.login = async () => {
+            try { await signInWithEmailAndPassword(auth, document.getElementById('email').value, document.getElementById('pass').value); }
+            catch(e) { alert(e.message); }
+        };
+        window.register = async () => {
+            try { await createUserWithEmailAndPassword(auth, document.getElementById('email').value, document.getElementById('pass').value); }
+            catch(e) { alert(e.message); }
+        };
+        window.logout = () => signOut(auth);
+
+    </script>
+</body>
+</html>
