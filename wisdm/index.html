@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WIDM - De Test</title>
+    <style>
+        :root {
+            --widm-red: #ff0000;
+            --widm-green: #00ff00;
+            --widm-black: #0a0a0a;
+            --widm-gray: #1a1a1a;
+        }
+
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: var(--widm-black);
+            color: white;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Containers */
+        #admin-panel, #kandidaat-scherm {
+            width: 90%;
+            max-width: 500px;
+            background: var(--widm-gray);
+            padding: 30px;
+            border: 2px solid #333;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .hidden { display: none !important; }
+
+        /* Input & Buttons */
+        input {
+            padding: 12px;
+            width: 80%;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background: #000;
+            color: white;
+            margin-bottom: 15px;
+            font-size: 1rem;
+        }
+
+        button {
+            padding: 12px 24px;
+            cursor: pointer;
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: 0.3s;
+        }
+
+        button:hover { background: #555; }
+
+        /* Admin Lijst */
+        .speler-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #333;
+            background: #222;
+            margin-top: 10px;
+        }
+
+        .btn-groen { background: #006400; border-color: #00ff00; }
+        .btn-rood { background: #8b0000; border-color: #ff0000; }
+
+        /* Resultaat Overlay */
+        #resultaat-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: background-color 0.5s ease;
+        }
+
+        .groen-scherm { background-color: var(--widm-green); color: black; }
+        .rood-scherm { background-color: var(--widm-red); color: white; }
+        
+        .naam-groot {
+            font-size: 4rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+        }
+
+        .flash { animation: blink 0.15s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <div id="admin-panel">
+        <h1 style="color: #666;">WIDM PANEL</h1>
+        <input type="text" id="nieuwe-speler-naam" placeholder="Naam toevoegen...">
+        <button onclick="voegSpelerToe()">Voeg Kandidaat Toe</button>
+        
+        <div id="spelers-lijst" style="margin-top: 20px; max-height: 300px; overflow-y: auto;">
+            </div>
+        
+        <div style="margin-top: 30px; border-top: 1px dashed #444; padding-top: 10px;">
+            <button onclick="switchView()" style="font-size: 0.7rem;">Open Kandidaat Scherm</button>
+        </div>
+    </div>
+
+    <div id="kandidaat-scherm" class="hidden">
+        <h1 style="letter-spacing: 5px;">DE TEST</h1>
+        <p>Vul je naam in om je resultaat te bekijken.</p>
+        <input type="text" id="kandidaat-input" placeholder="Je naam...">
+        <br>
+        <button onclick="checkResultaat()">Bekijk Scherm</button>
+        <p id="status-msg" style="margin-top: 20px; color: #888;"></p>
+    </div>
+
+    <div id="resultaat-overlay" class="hidden">
+        <div class="naam-groot" id="resultaat-naam"></div>
+    </div>
+
+    <script type="module">
+        // Firebase Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // Jouw specifieke config
+        const firebaseConfig = {
+            apiKey: "AIzaSyAAKZk7FivQAdv5tVlMqQrcqFC6X287JWc",
+            authDomain: "wie-is-de-mol-30aad.firebaseapp.com",
+            projectId: "wie-is-de-mol-30aad",
+            storageBucket: "wie-is-de-mol-30aad.firebasestorage.app",
+            messagingSenderId: "484393645764",
+            appId: "1:484393645764:web:f93aac49d32a31428dbb91",
+            measurementId: "G-EJT6PD5W1D"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // --- ADMIN FUNCTIES ---
+        window.voegSpelerToe = async () => {
+            const naamInput = document.getElementById('nieuwe-speler-naam');
+            if(!naamInput.value) return;
+            await addDoc(collection(db, "spelers"), {
+                naam: naamInput.value.trim().toLowerCase(),
+                status: "pending"
+            });
+            naamInput.value = "";
+        };
+
+        // Live update van de kandidatenlijst in het panel
+        onSnapshot(collection(db, "spelers"), (snapshot) => {
+            const lijstDiv = document.getElementById('spelers-lijst');
+            lijstDiv.innerHTML = "";
+            snapshot.forEach(docSnap => {
+                const speler = docSnap.data();
+                lijstDiv.innerHTML += `
+                    <div class="speler-item">
+                        <span style="text-transform: capitalize;">${speler.naam}</span>
+                        <div>
+                            <button class="btn-groen" onclick="updateStatus('${docSnap.id}', 'groen')">G</button>
+                            <button class="btn-rood" onclick="updateStatus('${docSnap.id}', 'rood')">R</button>
+                            <button onclick="verwijderSpeler('${docSnap.id}')" style="background: none; border: none; color: #555;">X</button>
+                        </div>
+                    </div>
+                `;
+            });
+        });
+
+        window.updateStatus = async (id, status) => {
+            await updateDoc(doc(db, "spelers", id), { status: status });
+        };
+
+        window.verwijderSpeler = async (id) => {
+            if(confirm("Speler verwijderen?")) await deleteDoc(doc(db, "spelers", id));
+        };
+
+        // --- KANDIDAAT FUNCTIES ---
+        window.checkResultaat = () => {
+            const naam = document.getElementById('kandidaat-input').value.trim().toLowerCase();
+            if(!naam) return;
+
+            document.getElementById('status-msg').innerText = "Verbinding maken met server...";
+            
+            const q = query(collection(db, "spelers"), where("naam", "==", naam));
+            
+            // Luister naar de status van deze specifieke speler
+            onSnapshot(q, (snapshot) => {
+                if(snapshot.empty) {
+                    document.getElementById('status-msg').innerText = "Naam niet gevonden. Vraag de spelleider om je toe te voegen.";
+                    return;
+                }
+
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    if(data.status === 'groen' || data.status === 'rood') {
+                        toonResultaat(data.naam, data.status, docSnap.id);
+                    } else {
+                        document.getElementById('status-msg').innerText = "Wachten op uitslag...";
+                    }
+                });
+            });
+        };
+
+        function toonResultaat(naam, status, id) {
+            const overlay = document.getElementById('resultaat-overlay');
+            const naamDiv = document.getElementById('resultaat-naam');
+            
+            overlay.classList.remove('hidden');
+            naamDiv.innerText = naam;
+
+            if(status === 'groen') {
+                overlay.className = 'groen-scherm';
+            } else {
+                overlay.className = 'rood-scherm flash';
+            }
+
+            // Na 6 seconden resetten we de status in de database naar 'pending' 
+            // zodat de kandidaat niet vast blijft zitten in het scherm.
+            setTimeout(async () => {
+                overlay.classList.add('hidden');
+                document.getElementById('status-msg').innerText = "";
+                await updateDoc(doc(db, "spelers", id), { status: "pending" });
+            }, 6000);
+        }
+
+        window.switchView = () => {
+            document.getElementById('admin-panel').classList.toggle('hidden');
+            document.getElementById('kandidaat-scherm').classList.toggle('hidden');
+        };
+    </script>
+</body>
+</html>
