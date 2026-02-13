@@ -8,10 +8,8 @@
         /* --- WIDM / MATRIX STYLING --- */
         :root {
             --widm-green: #00ff41;
-            --widm-dark-green: #003b00;
             --widm-red: #ff0000;
-            --widm-bg: #0d0d0d;
-            --scanline: rgba(0, 0, 0, 0.5);
+            --widm-bg: #050505;
         }
 
         @font-face {
@@ -32,208 +30,159 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            text-shadow: 0 0 5px var(--widm-green);
+            text-transform: uppercase;
         }
 
-        /* Scanline Effect overlay */
-        body::before {
-            content: " ";
-            display: block;
+        /* Scanlines voor sfeer */
+        body::after {
+            content: "";
             position: absolute;
-            top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            z-index: 2;
-            background-size: 100% 2px, 3px 100%;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15),
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
             pointer-events: none;
+            z-index: 5;
         }
 
-        /* --- LAYOUT & CONTAINERS --- */
         .container {
             z-index: 10;
             width: 100%;
-            max-width: 600px;
-            padding: 20px;
+            max-width: 700px;
+            padding: 40px;
             text-align: center;
-            border: 1px solid #333;
-            background: rgba(0, 10, 0, 0.9);
-            box-shadow: 0 0 20px var(--widm-dark-green);
         }
 
         .hidden { display: none !important; }
 
-        h1 {
-            letter-spacing: 5px;
-            text-transform: uppercase;
-            border-bottom: 2px solid var(--widm-green);
-            display: inline-block;
-            padding-bottom: 10px;
-            margin-bottom: 30px;
-        }
-
-        /* --- INPUTS & BUTTONS --- */
-        input {
+        /* --- KANDIDAAT INPUT (ONZICHTBAAR MAAR ACTIEF) --- */
+        /* We stylen de input zodat hij lijkt op terminal tekst */
+        #kandidaat-input {
             background: transparent;
             border: none;
-            border-bottom: 2px solid #333;
+            border-bottom: 3px solid var(--widm-green);
             color: var(--widm-green);
             font-family: 'WIDM-Mono', monospace;
-            font-size: 1.5rem;
+            font-size: 3rem; 
             width: 100%;
-            padding: 10px;
             text-align: center;
             outline: none;
+            caret-color: var(--widm-green); /* Groene cursor */
             text-transform: uppercase;
-            transition: 0.3s;
+            font-weight: bold;
         }
 
-        input:focus {
-            border-bottom: 2px solid var(--widm-green);
-            box-shadow: 0 10px 20px -10px var(--widm-green);
+        #kandidaat-input::placeholder {
+            color: #004400;
+            font-size: 2rem;
         }
 
-        button {
-            background: transparent;
-            color: var(--widm-green);
-            border: 1px solid var(--widm-green);
-            padding: 10px 30px;
-            margin-top: 20px;
-            font-family: 'WIDM-Mono', monospace;
-            font-size: 1rem;
-            cursor: pointer;
-            text-transform: uppercase;
-            transition: 0.2s;
+        /* --- ADMIN PANEL --- */
+        #view-admin {
+            border: 1px solid #333;
+            background: #111;
+            padding: 20px;
         }
-
-        button:hover {
-            background: var(--widm-green);
-            color: black;
-            box-shadow: 0 0 15px var(--widm-green);
-        }
-
-        /* --- ADMIN PANEL STYLES --- */
-        .admin-controls {
+        
+        .speler-rij {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px;
-            border: 1px solid #333;
-            margin-top: 10px;
-            background: #000;
+            border-bottom: 1px solid #333;
+            padding: 10px 0;
+            font-size: 1.2rem;
         }
 
-        .btn-mini {
-            padding: 5px 10px;
-            font-size: 0.8rem;
+        button {
+            cursor: pointer;
+            border: 1px solid var(--widm-green);
+            background: transparent;
+            color: var(--widm-green);
+            padding: 5px 15px;
+            font-family: 'WIDM-Mono', monospace;
             margin-left: 5px;
         }
         
-        .btn-red { border-color: red; color: red; text-shadow: 0 0 5px red; }
-        .btn-red:hover { background: red; color: black; }
+        button:hover { background: var(--widm-green); color: black; }
+        .btn-rood { border-color: red; color: red; }
+        .btn-rood:hover { background: red; color: white; }
 
-        /* --- AUTH SCREEN --- */
-        .auth-toggle {
-            margin-top: 15px;
-            font-size: 0.8rem;
-            cursor: pointer;
-            text-decoration: underline;
-            color: #666;
+        /* --- AUTH --- */
+        .auth-input {
+            display: block; width: 100%; margin-bottom: 10px;
+            background: #222; border: 1px solid #444; color: white; padding: 10px;
         }
-        .auth-toggle:hover { color: var(--widm-green); }
 
-        /* --- RESULT SCREEN (FULLSCREEN) --- */
-        #executie-overlay {
+        /* --- RESULTAAT SCHERMEN --- */
+        #overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 9999;
+            z-index: 999;
             display: flex;
             justify-content: center;
             align-items: center;
         }
-
-        .screen-green { background-color: #00ff00; }
         
-        .screen-red { 
-            background-color: #ff0000; 
-            animation: pulse-red 0.1s infinite;
-        }
+        .bg-green { background-color: #00ff00; }
+        .bg-red { background-color: #ff0000; animation: flashRed 0.2s; }
+        
+        @keyframes flashRed { 0% { opacity: 0; } 100% { opacity: 1; } }
 
-        @keyframes pulse-red {
-            0% { opacity: 1; } 50% { opacity: 0.9; } 100% { opacity: 1; }
-        }
-
-        /* --- TYPEWRITER CURSOR --- */
-        .cursor {
-            display: inline-block;
-            width: 10px;
-            height: 20px;
-            background-color: var(--widm-green);
-            animation: blink 1s step-end infinite;
-            vertical-align: middle;
-        }
-        @keyframes blink { 50% { opacity: 0; } }
-
-        /* Kleine admin knop rechtsonder */
-        #admin-link {
-            position: fixed;
-            bottom: 10px; right: 10px;
-            opacity: 0.3;
-            font-size: 0.7rem;
-            cursor: pointer;
-            z-index: 100;
+        /* Admin switch knopje onzichtbaar rechtsonder */
+        #secret-btn {
+            position: fixed; bottom: 0; right: 0; width: 50px; height: 50px;
+            opacity: 0; cursor: default; z-index: 100;
         }
     </style>
 </head>
 <body>
 
     <div id="view-kandidaat" class="container">
-        <h1>EXECUTIE</h1>
-        <div id="terminal-output" style="margin-bottom: 20px; min-height: 20px;"></div>
+        <h1 style="letter-spacing: 10px; margin-bottom: 50px;">DE EXECUTIE</h1>
         
-        <input type="text" id="kandidaat-input" placeholder="NAAM INVOEREN..." autocomplete="off">
-        <br>
-        <span class="cursor"></span>
-        <p style="font-size: 0.7rem; color: #444; margin-top: 20px;">DRUK OP [ENTER] OM TE STARTEN</p>
+        <div id="status-msg" style="height: 30px; margin-bottom: 20px; font-size: 1.2rem;">VOER JE NAAM IN:</div>
         
-        <div id="status-text" style="margin-top: 30px; font-weight: bold;"></div>
+        <input type="text" id="kandidaat-input" autocomplete="off" autofocus>
+        
+        <p style="margin-top: 50px; font-size: 0.8rem; color: #444;">DRUK OP [ENTER] OM TE STARTEN</p>
     </div>
 
-    <div id="view-auth" class="container hidden">
-        <h1>ADMIN LOGIN</h1>
-        <input type="email" id="auth-email" placeholder="EMAIL" style="margin-bottom: 10px;">
-        <input type="password" id="auth-password" placeholder="WACHTWOORD">
-        
-        <button onclick="handleLogin()" id="btn-login">LOGIN</button>
-        <button onclick="handleRegister()" id="btn-register" class="hidden">MAAK ACCOUNT</button>
-        
-        <p class="auth-toggle" onclick="toggleAuthMode()">Geen account? Klik hier.</p>
-        <p class="auth-toggle" onclick="showKandidaatView()">Terug naar kandidaat scherm</p>
+    <div id="view-auth" class="container hidden" style="background: #000; border: 1px solid #444;">
+        <h2>ADMIN LOGIN</h2>
+        <input type="email" id="email" class="auth-input" placeholder="Email">
+        <input type="password" id="pass" class="auth-input" placeholder="Wachtwoord">
+        <button onclick="login()">INLOGGEN</button>
+        <button onclick="register()">REGISTREREN</button>
+        <p style="margin-top: 20px; font-size: 0.8rem; cursor: pointer;" onclick="goHome()">Terug</p>
     </div>
 
-    <div id="view-admin" class="container hidden" style="max-width: 800px;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h1>PANEL</h1>
-            <button class="btn-mini btn-red" onclick="handleLogout()">UITLOGGEN</button>
-        </div>
-        
-        <div style="display: flex; gap: 10px;">
-            <input type="text" id="admin-speler-naam" placeholder="Naam kandidaat">
-            <button onclick="voegSpelerToe()" style="margin-top:0;">TOEVOEGEN</button>
+    <div id="view-admin" class="container hidden">
+        <div style="display:flex; justify-content:space-between; margin-bottom: 20px;">
+            <span>ADMIN PANEL</span>
+            <button class="btn-rood" onclick="logout()">LOG UIT</button>
         </div>
 
-        <div id="spelers-lijst" style="margin-top: 30px; text-align: left; max-height: 400px; overflow-y: auto;">
-            </div>
+        <div style="display:flex; gap: 10px; margin-bottom: 20px;">
+            <input type="text" id="admin-naam" class="auth-input" placeholder="NAAM KANDIDAAT" style="margin:0;">
+            <button onclick="addSpeler()">TOEVOEGEN</button>
+        </div>
+
+        <div id="spelers-lijst"></div>
     </div>
 
-    <div id="executie-overlay" class="hidden"></div>
+    <div id="overlay" class="hidden"></div>
 
-    <div id="admin-link" onclick="showAuthView()">ADMIN ///</div>
+    <div id="secret-btn" onclick="showAuth()"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, query, where, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // CONFIGURATIE
         const firebaseConfig = {
             apiKey: "AIzaSyAAKZk7FivQAdv5tVlMqQrcqFC6X287JWc",
             authDomain: "wie-is-de-mol-30aad.firebaseapp.com",
@@ -247,161 +196,149 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-
-        // --- NAVIGATION LOGIC ---
-        window.showAuthView = () => switchView('view-auth');
-        window.showKandidaatView = () => switchView('view-kandidaat');
         
-        function switchView(viewId) {
-            ['view-kandidaat', 'view-auth', 'view-admin'].forEach(id => {
-                document.getElementById(id).classList.add('hidden');
-            });
-            document.getElementById(viewId).classList.remove('hidden');
-        }
+        // --- GLOBALE VARIABELEN ---
+        let currentUnsubscribe = null; // Om te stoppen met luisteren als scherm klaar is
 
-        // --- AUTHENTICATION ---
-        let isLoginMode = true;
-
+        // --- AUTH STATUS CHECK ---
+        // Dit zorgt dat hij onthoudt dat je ingelogd bent, ook na refreshen
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                switchView('view-admin'); // Als ingelogd, ga direct naar admin
-                laadSpelersLijst();
+                // Gebruiker is ingelogd -> ga naar Admin
+                document.getElementById('view-auth').classList.add('hidden');
+                document.getElementById('view-kandidaat').classList.add('hidden');
+                document.getElementById('view-admin').classList.remove('hidden');
+                laadLijst();
+            } else {
+                // Niemand ingelogd -> ga naar Kandidaat scherm
+                goHome();
             }
         });
 
-        window.toggleAuthMode = () => {
-            isLoginMode = !isLoginMode;
-            document.getElementById('btn-login').classList.toggle('hidden');
-            document.getElementById('btn-register').classList.toggle('hidden');
-            const toggleText = document.querySelector('.auth-toggle');
-            toggleText.innerText = isLoginMode ? "Geen account? Klik hier." : "Heb je al een account? Login.";
-        };
-
-        window.handleLogin = async () => {
-            const e = document.getElementById('auth-email').value;
-            const p = document.getElementById('auth-password').value;
-            try {
-                await signInWithEmailAndPassword(auth, e, p);
-            } catch (error) { alert("Fout: " + error.message); }
-        };
-
-        window.handleRegister = async () => {
-            const e = document.getElementById('auth-email').value;
-            const p = document.getElementById('auth-password').value;
-            try {
-                await createUserWithEmailAndPassword(auth, e, p);
-            } catch (error) { alert("Fout: " + error.message); }
-        };
-
-        window.handleLogout = () => {
-            signOut(auth);
-            showKandidaatView();
-        };
-
-        // --- ADMIN FUNCTIES ---
-        window.voegSpelerToe = async () => {
-            const naam = document.getElementById('admin-speler-naam').value.trim().toUpperCase();
-            if(!naam) return;
-            await addDoc(collection(db, "spelers"), { naam: naam, status: "pending" });
-            document.getElementById('admin-speler-naam').value = "";
-        };
-
-        function laadSpelersLijst() {
-            onSnapshot(collection(db, "spelers"), (snapshot) => {
-                const div = document.getElementById('spelers-lijst');
-                div.innerHTML = "";
-                snapshot.forEach(snap => {
-                    const data = snap.data();
-                    const statusColor = data.status === 'groen' ? 'color:lime' : (data.status === 'rood' ? 'color:red' : 'color:gray');
-                    div.innerHTML += `
-                        <div class="admin-controls">
-                            <span style="${statusColor}; font-weight:bold; width: 100px;">${data.naam}</span>
-                            <div>
-                                <button class="btn-mini" onclick="setStatus('${snap.id}', 'pending')">RESET</button>
-                                <button class="btn-mini" style="border-color:lime; color:lime;" onclick="setStatus('${snap.id}', 'groen')">GROEN</button>
-                                <button class="btn-mini btn-red" onclick="setStatus('${snap.id}', 'rood')">ROOD</button>
-                                <button class="btn-mini" style="border:none; color:#555;" onclick="verwijder('${snap.id}')">X</button>
-                            </div>
-                        </div>
-                    `;
-                });
-            });
-        }
-
-        window.setStatus = async (id, status) => await updateDoc(doc(db, "spelers", id), { status });
-        window.verwijder = async (id) => { if(confirm("Zeker?")) await deleteDoc(doc(db, "spelers", id)); };
+        // --- FOCUS FIX ---
+        // Zorgt dat je altijd in de balk typt, ook als je ernaast klikt in het kandidaat scherm
+        document.addEventListener('click', () => {
+            const input = document.getElementById('kandidaat-input');
+            if(!document.getElementById('view-kandidaat').classList.contains('hidden')) {
+                input.focus();
+            }
+        });
 
         // --- KANDIDAAT LOGICA ---
-        const kandidaatInput = document.getElementById('kandidaat-input');
+        const inputVeld = document.getElementById('kandidaat-input');
         
-        // Enter toets luisteren
-        kandidaatInput.addEventListener("keydown", (e) => {
+        inputVeld.addEventListener("keydown", async (e) => {
             if (e.key === "Enter") {
-                startExecutie();
-            }
-        });
+                const rauweNaam = inputVeld.value;
+                if(!rauweNaam) return;
 
-        // Simpel type effect bij laden
-        const terminalText = "VERBINDING MAKEN MET DATABASE...";
-        let i = 0;
-        function typeWriter() {
-            if (i < terminalText.length) {
-                document.getElementById("terminal-output").innerHTML += terminalText.charAt(i);
-                i++;
-                setTimeout(typeWriter, 50);
-            }
-        }
-        window.onload = typeWriter;
+                // 1. Maak invoer schoon (alles hoofdletters)
+                const naam = rauweNaam.trim().toUpperCase();
+                
+                document.getElementById('status-msg').innerText = "ZOEKEN IN DATABASE...";
+                
+                // 2. Check of naam bestaat
+                const q = query(collection(db, "spelers"), where("naam", "==", naam));
+                const snapshot = await getDocs(q);
 
-        async function startExecutie() {
-            const naam = kandidaatInput.value.trim().toUpperCase();
-            if(!naam) return;
-
-            document.getElementById('status-text').innerHTML = "NAAM GEACCEPTEERD.<br>WACHTEN OP INVOER TESTRESULTATEN...";
-            
-            // Luister naar de status
-            const q = query(collection(db, "spelers"), where("naam", "==", naam));
-            
-            // We slaan de unsubscribe functie op om te voorkomen dat hij blijft luisteren na het scherm
-            const unsubscribe = onSnapshot(q, (snapshot) => {
-                if(snapshot.empty) {
-                    document.getElementById('status-text').innerText = "ERROR: KANDIDAAT NIET GEVONDEN.";
+                if (snapshot.empty) {
+                    document.getElementById('status-msg').innerHTML = "<span style='color:red'>NAAM NIET GEVONDEN! PROBEER OPNIEUW.</span>";
+                    inputVeld.value = "";
                     return;
                 }
 
-                snapshot.forEach(docSnap => {
-                    const data = docSnap.data();
-                    if(data.status === 'groen') {
-                        triggerScreen('groen');
-                        unsubscribe(); // Stop luisteren
-                    } else if (data.status === 'rood') {
-                        triggerScreen('rood');
-                        unsubscribe(); // Stop luisteren
-                    }
+                // 3. Naam bestaat -> Start Wachten
+                document.getElementById('status-msg').innerText = "CONNECTIE GEMAAKT. WACHT OP UITSLAG...";
+                
+                // Luister realtime naar wijzigingen
+                if(currentUnsubscribe) currentUnsubscribe(); // Stop vorige listener
+                
+                currentUnsubscribe = onSnapshot(q, (snap) => {
+                    snap.forEach(doc => {
+                        const data = doc.data();
+                        if (data.status === 'groen') showResult('green');
+                        if (data.status === 'rood') showResult('red');
+                    });
+                });
+            }
+        });
+
+        function showResult(color) {
+            const overlay = document.getElementById('overlay');
+            overlay.classList.remove('hidden');
+            overlay.className = (color === 'green') ? 'bg-green' : 'bg-red';
+            
+            // Stop met luisteren anders blijft hij triggeren
+            if(currentUnsubscribe) currentUnsubscribe();
+
+            // Reset na 5 seconden
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                overlay.className = 'hidden'; // Kleur weg
+                inputVeld.value = "";
+                document.getElementById('status-msg').innerText = "VOER JE NAAM IN:";
+                inputVeld.focus();
+            }, 5000);
+        }
+
+        // --- ADMIN LOGICA ---
+        window.addSpeler = async () => {
+            const naamVeld = document.getElementById('admin-naam');
+            // Belangrijk: Alles opslaan in HOOFDLETTERS
+            const naam = naamVeld.value.trim().toUpperCase(); 
+            if(!naam) return;
+            
+            try {
+                await addDoc(collection(db, "spelers"), { naam: naam, status: "pending" });
+                naamVeld.value = "";
+                naamVeld.focus();
+            } catch(e) { alert("Fout: " + e.message); }
+        };
+
+        function laadLijst() {
+            onSnapshot(collection(db, "spelers"), (snap) => {
+                const div = document.getElementById('spelers-lijst');
+                div.innerHTML = "";
+                snap.forEach(d => {
+                    const data = d.data();
+                    div.innerHTML += `
+                        <div class="speler-rij">
+                            <span>${data.naam} <small>(${data.status})</small></span>
+                            <div>
+                                <button onclick="setStatus('${d.id}', 'groen')" style="border-color:lime">GR</button>
+                                <button onclick="setStatus('${d.id}', 'rood')" class="btn-rood">RO</button>
+                                <button onclick="del('${d.id}')">X</button>
+                            </div>
+                        </div>`;
                 });
             });
         }
 
-        function triggerScreen(type) {
-            const overlay = document.getElementById('executie-overlay');
-            overlay.classList.remove('hidden');
-            
-            if (type === 'groen') {
-                overlay.className = 'screen-green';
-            } else {
-                overlay.className = 'screen-red';
-            }
+        window.setStatus = async (id, st) => await updateDoc(doc(db, "spelers", id), { status: st });
+        window.del = async (id) => { if(confirm("Verwijderen?")) await deleteDoc(doc(db, "spelers", id)); };
 
-            // Na 5 seconden resetten
-            setTimeout(() => {
-                overlay.classList.add('hidden');
-                document.getElementById('status-text').innerText = "SESSIE BEËINDIGD.";
-                kandidaatInput.value = "";
-                overlay.className = "hidden"; // Verwijder kleuren classes
-                // Herlaad pagina voor volgende kandidaat (optioneel, houdt het strak)
-                // location.reload(); 
-            }, 5000);
-        }
+        // --- AUTH KNOPPEN ---
+        window.login = async () => {
+            try { await signInWithEmailAndPassword(auth, document.getElementById('email').value, document.getElementById('pass').value); }
+            catch(e) { alert(e.message); }
+        };
+        window.register = async () => {
+            try { await createUserWithEmailAndPassword(auth, document.getElementById('email').value, document.getElementById('pass').value); }
+            catch(e) { alert(e.message); }
+        };
+        window.logout = () => signOut(auth);
+
+        // Navigatie helpers
+        window.showAuth = () => {
+            document.getElementById('view-kandidaat').classList.add('hidden');
+            document.getElementById('view-auth').classList.remove('hidden');
+        };
+        window.goHome = () => {
+            document.getElementById('view-auth').classList.add('hidden');
+            document.getElementById('view-admin').classList.add('hidden');
+            document.getElementById('view-kandidaat').classList.remove('hidden');
+            setTimeout(() => document.getElementById('kandidaat-input').focus(), 100);
+        };
 
     </script>
 </body>
