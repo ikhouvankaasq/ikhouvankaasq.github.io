@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Three.js Project</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { overflow: hidden; }
+    canvas { display: block; }
+    #instructions {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: white;
+      font-family: Arial, sans-serif;
+      font-size: 24px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 30px;
+      border-radius: 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+    #stamina-bar {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      width: 200px;
+      height: 20px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid white;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    #stamina-fill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #ffcc00, #ff6600);
+    }
+    #time-display {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      color: white;
+      font-family: Arial, sans-serif;
+      font-size: 18px;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 10px 20px;
+      border-radius: 5px;
+    }
+    #item-bar {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 5px;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 5px;
+      border-radius: 5px;
+    }
+    .item-slot {
+      width: 50px;
+      height: 50px;
+      background: rgba(100, 100, 100, 0.5);
+      border: 2px solid #555;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 24px;
+    }
+    .item-slot.active {
+      border-color: white;
+      background: rgba(150, 150, 150, 0.5);
+    }
+    #command-panel {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.9);
+      padding: 20px;
+      border-radius: 10px;
+      display: none;
+    }
+    #command-input {
+      width: 300px;
+      padding: 10px;
+      font-size: 16px;
+      font-family: monospace;
+      background: #222;
+      color: #0f0;
+      border: 1px solid #444;
+      border-radius: 5px;
+    }
+    #command-output {
+      color: #888;
+      font-family: monospace;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="instructions">Click to play<br><small>WASD to move, SHIFT to sprint, SPACE to jump</small></div>
+  <div id="stamina-bar"><div id="stamina-fill"></div></div>
+  <div id="time-display">12:00</div>
+  <div id="item-bar">
+    <div class="item-slot" id="slot-1"></div>
+    <div class="item-slot" id="slot-2"></div>
+    <div class="item-slot" id="slot-3"></div>
+    <div class="item-slot" id="slot-4"></div>
+    <div class="item-slot" id="slot-5"></div>
+  </div>
+  <div id="command-panel">
+    <input type="text" id="command-input" placeholder="Type command...">
+    <div id="command-output"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
+    scene.fog = new THREE.Fog(0x87ceeb, 10, 80);
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 2, 10);
+
+    const ambientLight = new THREE.AmbientLight(0x404040, 1.5);
+    scene.add(ambientLight);
+
+    const sunLight = new THREE.DirectionalLight(0xffffff, 2);
+    sunLight.position.set(5, 10, 5);
+    scene.add(sunLight);
+
+    const moonGeometry = new THREE.SphereGeometry(2, 64, 64);
+    const moonCanvas = document.createElement('canvas');
+    moonCanvas.width = 512;
+    moonCanvas.height = 256;
+    const ctx = moonCanvas.getContext('2d');
+    ctx.fillStyle = '#c0c0c0';
+    ctx.fillRect(0, 0, 512, 256);
+    for (let i = 0; i < 80; i++) {
+      const x = Math.random() * 512;
+      const y = Math.random() * 256;
+      const r = 2 + Math.random() * 15;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(100, 100, 100, ${0.1 + Math.random() * 0.3})`;
+      ctx.fill();
+    }
+    for (let i = 0; i < 20; i++) {
+      const x = Math.random() * 512;
+      const y = Math.random() * 256;
+      const r = 3 + Math.random() * 8;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(60, 60, 60, ${0.2 + Math.random() * 0.3})`;
+      ctx.fill();
+    }
+    const moonTexture = new THREE.CanvasTexture(moonCanvas);
+    const moonMaterial = new THREE.MeshBasicMaterial({ 
+      map: moonTexture,
+      fog: false,
+      transparent: true,
+      opacity: 0
+    });
+    const moon = new THREE.Mesh(moonGeometry, moonMaterial);
+    moon.position.set(-20, 40, -30);
+    moon.name = 'moon';
+    scene.add(moon);
+
+    const moonGlowGeometry = new THREE.SphereGeometry(3, 32, 32);
+    const moonGlowMaterial = new THREE.MeshBasicMaterial({
+      color: 0xaaccff,
+      transparent: true,
+      opacity: 0,
+      fog: false
+    });
+    const moonGlow = new THREE.Mesh(moonGlowGeometry, moonGlowMaterial);
+    moonGlow.position.copy(moon.position);
+    moonGlow.name = 'moonGlow';
+    scene.add(moonGlow);
+
+    const moonLight = new THREE.PointLight(0xaaaaff, 0.6, 100);
+    moonLight.position.copy(moon.position);
+    moonLight.name = 'moonLight';
+    scene.add(moonLight);
+
+    const starsGeometry = new THREE.BufferGeometry();
+    const starsCount = 1500;
+    const starsPositions = new Float32Array(starsCount * 3);
+    for (let i = 0; i < starsCount * 3; i += 3) {
+      const radius = 40;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.random() * Math.PI * 0.5;
+      starsPositions[i] = radius * Math.sin(phi) * Math.cos(theta);
+      starsPositions[i + 1] = Math.abs(radius * Math.cos(phi)) + 10;
+      starsPositions[i + 2] = radius * Math.sin(phi) * Math.sin(theta);
+    }
+    starsGeometry.setAttribute('position', new THREE.BufferAttribute(starsPositions, 3));
+    const starsMaterial = new THREE.PointsMaterial({ 
+      color: 0xffffff, 
+      size: 0.8, 
+      sizeAttenuation: false,
+      fog: false,
+      transparent: true, 
+      opacity: 0 
+    });
+    const stars = new THREE.Points(starsGeometry, starsMaterial);
+    stars.name = 'stars';
+    scene.add(stars);
+
+    const groundGeometry = new THREE.PlaneGeometry(100, 100, 50, 50);
+    const groundMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0x228b22,
+      roughness: 1,
+      metalness: 0
+    });
+    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+    ground.rotation.x = -Math.PI / 2;
+    scene.add(ground);
+
+    const GameTime = {
+      dayTime: 8 / 24,
+      dayDuration: 2400,
+      frozen: false,
+
+      update(delta) {
+        if (!this.frozen) {
+          this.dayTime += delta / this.dayDuration;
+          if (this.dayTime > 1) this.dayTime -= 1;
+        }
+      },
+
+      getCurrentGameHour() {
+        return this.dayTime * 24;
+      },
+
+      isNight() {
+        const hour = this.getCurrentGameHour();
+        return hour >= 18 || hour < 6;
+      },
+
+      isDay() {
+        return !this.isNight();
+      },
+
+      getSunHeight() {
+        const sunAngle = this.dayTime * Math.PI * 2 - Math.PI / 2;
+        return Math.sin(sunAngle);
+      },
+
+      setTime(hours, minutes = 0) {
+        this.dayTime = (hours + minutes / 60) / 24;
+      },
+
+      freeze() { this.frozen = true; },
+      unfreeze() { this.frozen = false; },
+      toggleFreeze() { this.frozen = !this.frozen; }
+    };
+
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    document.body.appendChild(renderer.domElement);
+
+    let isLocked = false;
+    const velocity = new THREE.Vector3();
+    const direction = new THREE.Vector3();
+    const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+
+    const keys = { forward: false, backward: false, left: false, right: false, sprint: false };
+    let canJump = false, velocityY = 0;
+    const gravity = -30, jumpStrength = 12, walkSpeed = 8, sprintSpeed = 14, groundLevel = 1.6;
+
+    let stamina = 100, isSprinting = false;
+    let staminaInfinite = false;
+    let hasStarted = false;
+    let hasFlashlight = true;
+    let flashlightOn = false;
+    let selectedSlot = 1;
+    const staminaFill = document.getElementById('stamina-fill');
+    const instructions = document.getElementById('instructions');
+    const timeDisplay = document.getElementById('time-display');
+    const commandPanel = document.getElementById('command-panel');
+    const commandInput = document.getElementById('command-input');
+    const commandOutput = document.getElementById('command-output');
+    let commandOpen = false;
+
+    const flashlight = new THREE.SpotLight(0xffffff, 0, 100, Math.PI / 3, 0.2, 1.5);
+    flashlight.position.set(0, 0, 0);
+    flashlight.target.position.set(0, 0, -1);
+    flashlight.intensity = 0;
+    camera.add(flashlight);
+    camera.add(flashlight.target);
+    scene.add(camera);
+
+    document.getElementById('slot-1').textContent = '🔦';
+    selectSlot(1);
+
+    instructions.addEventListener('click', () => {
+      hasStarted = true;
+      document.body.requestPointerLock();
+    });
+
+    document.addEventListener('pointerlockchange', () => {
+      isLocked = document.pointerLockElement === document.body;
+      if (hasStarted && !commandOpen) {
+        instructions.style.display = isLocked ? 'none' : 'block';
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Escape' && commandOpen) {
+        e.preventDefault();
+        commandOpen = false;
+        commandPanel.style.display = 'none';
+        document.body.requestPointerLock();
+      }
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isLocked) return;
+      euler.setFromQuaternion(camera.quaternion);
+      euler.y -= e.movementX * 0.002;
+      euler.x -= e.movementY * 0.002;
+      euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.x));
+      camera.quaternion.setFromEuler(euler);
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Slash' && isLocked) {
+        e.preventDefault();
+        commandOpen = !commandOpen;
+        commandPanel.style.display = commandOpen ? 'block' : 'none';
+        commandInput.value = '';
+        commandOutput.textContent = '';
+        if (commandOpen) {
+          commandInput.focus();
+          document.exitPointerLock();
+          instructions.style.display = 'none';
+        } else {
+          document.body.requestPointerLock();
+        }
+        return;
+      }
+      
+      if (commandOpen) return;
+      
+      switch(e.code) {
+        case 'KeyW': keys.forward = true; break;
+        case 'KeyS': keys.backward = true; break;
+        case 'KeyA': keys.left = true; break;
+        case 'KeyD': keys.right = true; break;
+        case 'Space': if(canJump) { velocityY = jumpStrength; canJump = false; } break;
+        case 'ShiftLeft': case 'ShiftRight': keys.sprint = true; break;
+        case 'KeyF': 
+          if (hasFlashlight && selectedSlot === 1) {
+            flashlightOn = !flashlightOn;
+            flashlight.intensity = flashlightOn ? 10 : 0;
+          }
+          break;
+        case 'Digit1': selectSlot(1); break;
+        case 'Digit2': selectSlot(2); break;
+        case 'Digit3': selectSlot(3); break;
+        case 'Digit4': selectSlot(4); break;
+        case 'Digit5': selectSlot(5); break;
+      }
+    });
+
+    function selectSlot(slot) {
+      selectedSlot = slot;
+      document.querySelectorAll('.item-slot').forEach((el, i) => {
+        el.classList.toggle('active', i + 1 === slot);
+      });
+      if (slot !== 1) {
+        flashlightOn = false;
+        flashlight.intensity = 0;
+      }
+    }
+
+    document.addEventListener('keyup', (e) => {
+      switch(e.code) {
+        case 'KeyW': keys.forward = false; break;
+        case 'KeyS': keys.backward = false; break;
+        case 'KeyA': keys.left = false; break;
+        case 'KeyD': keys.right = false; break;
+        case 'ShiftLeft': case 'ShiftRight': keys.sprint = false; break;
+      }
+    });
+
+    commandInput.addEventListener('keydown', (e) => {
+      if (e.code === 'Enter') {
+        const cmd = commandInput.value.trim().toLowerCase();
+        const parts = cmd.split(' ');
+        
+        if (parts[0] === '/time') {
+          if (parts[1] === 'freeze') {
+            GameTime.toggleFreeze();
+            commandOutput.textContent = GameTime.frozen ? 'Time frozen' : 'Time unfrozen';
+          } else if (parts[1] === 'set' && parts[2]) {
+            const timeParts = parts[2].split(':');
+            if (timeParts.length === 2) {
+              const hours = parseInt(timeParts[0]);
+              const minutes = parseInt(timeParts[1]);
+              if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
+                GameTime.setTime(hours, minutes);
+                commandOutput.textContent = `Time set to ${parts[2]}`;
+              } else {
+                commandOutput.textContent = 'Invalid time format. Use HH:MM';
+              }
+            } else {
+              commandOutput.textContent = 'Invalid format. Use /time set HH:MM';
+            }
+          } else {
+            commandOutput.textContent = 'Commands: /time freeze, /time set HH:MM, /give me flashlight, /stamina ...';
+          }
+        } else if (cmd === '/help') {
+          commandOutput.textContent = 'Commands: /time freeze, /time set HH:MM, /give me flashlight, /stamina ...';
+        } else if (cmd === '/give me flashlight') {
+          hasFlashlight = true;
+          document.getElementById('slot-1').textContent = '🔦';
+          selectSlot(1);
+          commandOutput.textContent = 'Flashlight given! Press 1 to select';
+        } else if (cmd.startsWith('/stamina')) {
+          const parts = cmd.split(' ');
+          if (parts[1] === 'infinity') {
+            staminaInfinite = true;
+            stamina = 100;
+            commandOutput.textContent = 'Stamina infinite enabled';
+          } else if (parts[1] === 'standard') {
+            staminaInfinite = false;
+            stamina = 100;
+            commandOutput.textContent = 'Stamina reset to standard';
+          } else if (parts[1]) {
+            const val = parseInt(parts[1]);
+            if (!isNaN(val) && val >= 0 && val <= 100) {
+              stamina = val;
+              staminaInfinite = false;
+              commandOutput.textContent = `Stamina set to ${val}`;
+            } else {
+              commandOutput.textContent = 'Invalid stamina value (0-100)';
+            }
+          } else {
+            commandOutput.textContent = 'Commands: /stamina infinity, /stamina standard, /stamina (0-100)';
+          }
+        } else if (cmd === '') {
+          commandOutput.textContent = '';
+        } else {
+          commandOutput.textContent = 'Unknown command. Type /help';
+        }
+        
+        commandInput.value = '';
+      }
+      
+      if (e.code === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        commandOpen = false;
+        commandPanel.style.display = 'none';
+        instructions.style.display = 'none';
+        document.body.requestPointerLock();
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    let dayTime = 0.5;
+    const dayDuration = 120;
+
+    function updateDayNightCycle(delta) {
+      GameTime.update(delta);
+
+      const sunAngle = GameTime.dayTime * Math.PI * 2 - Math.PI / 2;
+      const sunHeight = Math.sin(sunAngle);
+      const sunDistance = 50;
+
+      sunLight.position.x = Math.cos(sunAngle) * sunDistance;
+      sunLight.position.y = Math.max(0, sunHeight * sunDistance);
+      sunLight.position.z = 10;
+
+      const t = Math.max(0, sunHeight);
+      const tSmooth = t * t * (3 - 2 * t);
+
+      const sunIntensity = tSmooth * 2;
+      const ambientIntensity = 0.05 + tSmooth * 1.45;
+
+      const nightSky = { r: 0.02, g: 0.02, b: 0.06 };
+      const daySky = { r: 0.53, g: 0.81, b: 0.92 };
+      const skyColor = {
+        r: nightSky.r + (daySky.r - nightSky.r) * tSmooth,
+        g: nightSky.g + (daySky.g - nightSky.g) * tSmooth,
+        b: nightSky.b + (daySky.b - nightSky.b) * tSmooth
+      };
+
+      const nightFog = { near: 20, far: 200 };
+      const dayFog = { near: 10, far: 80 };
+      const fog = {
+        near: nightFog.near + (dayFog.near - nightFog.near) * tSmooth,
+        far: nightFog.far + (dayFog.far - nightFog.far) * tSmooth
+      };
+
+      const nightGrass = { r: 0.04, g: 0.08, b: 0.03 };
+      const dayGrass = { r: 0.15, g: 0.35, b: 0.08 };
+      const grassColor = {
+        r: nightGrass.r + (dayGrass.r - nightGrass.r) * tSmooth,
+        g: nightGrass.g + (dayGrass.g - nightGrass.g) * tSmooth,
+        b: nightGrass.b + (dayGrass.b - nightGrass.b) * tSmooth
+      };
+
+      sunLight.intensity = sunIntensity;
+      moonLight.intensity = (1 - tSmooth) * 0.5;
+      starsMaterial.opacity = Math.pow(1 - tSmooth, 0.7);
+      moonMaterial.opacity = Math.pow(1 - tSmooth, 0.5);
+      
+      const moonGlow = scene.getObjectByName('moonGlow');
+      if (moonGlow) {
+        moonGlowMaterial.opacity = Math.pow(1 - tSmooth, 0.5) * 0.3;
+      }
+      
+      scene.background.setRGB(skyColor.r, skyColor.g, skyColor.b);
+      scene.fog.color.setRGB(skyColor.r, skyColor.g, skyColor.b);
+      scene.fog.near = fog.near;
+      scene.fog.far = fog.far;
+      ambientLight.intensity = ambientIntensity;
+      groundMaterial.color.setRGB(grassColor.r, grassColor.g, grassColor.b);
+
+      const hours = Math.floor(GameTime.getCurrentGameHour());
+      const minutes = Math.floor((GameTime.getCurrentGameHour() - hours) * 60);
+      timeDisplay.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      timeDisplay.style.color = GameTime.isDay() ? 'white' : '#888';
+    }
+
+    let prevTime = performance.now();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const time = performance.now();
+      const delta = (time - prevTime) / 1000;
+      prevTime = time;
+
+      updateDayNightCycle(delta);
+
+      const stars = scene.getObjectByName('stars');
+      if (stars) {
+        stars.position.x = camera.position.x;
+        stars.position.z = camera.position.z;
+      }
+
+      const moon = scene.getObjectByName('moon');
+      const moonLight = scene.getObjectByName('moonLight');
+      const moonGlow = scene.getObjectByName('moonGlow');
+      if (moon && moonLight && moonGlow) {
+        moon.position.x = camera.position.x - 20;
+        moon.position.z = camera.position.z - 30;
+        moonLight.position.copy(moon.position);
+        moonGlow.position.copy(moon.position);
+      }
+
+      if (isLocked) {
+        isSprinting = keys.sprint && stamina > 0 && (keys.forward || keys.backward || keys.left || keys.right);
+        
+        if (!staminaInfinite) {
+          if (isSprinting) stamina = Math.max(0, stamina - 30 * delta);
+          else stamina = Math.min(100, stamina + 10 * delta);
+        } else {
+          stamina = 100;
+        }
+
+        const speed = isSprinting ? sprintSpeed : walkSpeed;
+        direction.z = Number(keys.forward) - Number(keys.backward);
+        direction.x = Number(keys.right) - Number(keys.left);
+        direction.normalize();
+
+        if (direction.length() > 0) {
+          const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+          forward.y = 0;
+          forward.normalize();
+          const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+          right.y = 0;
+          right.normalize();
+
+          camera.position.addScaledVector(forward, direction.z * speed * delta);
+          camera.position.addScaledVector(right, direction.x * speed * delta);
+        }
+
+        velocityY += gravity * delta;
+        camera.position.y += velocityY * delta;
+
+        if (camera.position.y < groundLevel) {
+          velocityY = 0;
+          camera.position.y = groundLevel;
+          canJump = true;
+        }
+
+        staminaFill.style.width = stamina + '%';
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
