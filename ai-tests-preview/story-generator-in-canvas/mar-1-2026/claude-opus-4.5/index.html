@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎨 Dynamic Story Canvas Generator</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Quicksand:wght@300;500&display=swap');
+        
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+        }
+        
+        .title-font {
+            font-family: 'Cinzel', serif;
+        }
+        
+        #storyCanvas {
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(99, 102, 241, 0.2);
+        }
+        
+        .glow-button {
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
+            transition: all 0.3s ease;
+        }
+        
+        .glow-button:hover {
+            box-shadow: 0 0 40px rgba(99, 102, 241, 0.8);
+            transform: translateY(-2px);
+        }
+        
+        .story-text {
+            background: linear-gradient(90deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+            backdrop-filter: blur(10px);
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .floating {
+            animation: float 3s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="title-font text-4xl md:text-5xl font-bold text-white mb-2 floating">
+                🎨 Dynamic Story Canvas
+            </h1>
+            <p class="text-indigo-300 text-lg">Voer een verhaal in en zie het tot leven komen</p>
+        </header>
+
+        <!-- Input Section -->
+        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-6">
+            <div class="flex flex-col md:flex-row gap-4">
+                <input 
+                    type="text" 
+                    id="promptInput" 
+                    placeholder="Beschrijf je scène... (bijv. 'een magische boswandeling bij nacht')"
+                    class="flex-1 px-6 py-4 rounded-xl bg-white/20 text-white placeholder-white/50 border border-white/20 focus:border-indigo-400 focus:outline-none text-lg"
+                >
+                <button 
+                    id="generateBtn"
+                    class="glow-button px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all"
+                >
+                    ✨ Generate Scene
+                </button>
+            </div>
+            
+            <!-- Quick Prompts -->
+            <div class="flex flex-wrap gap-2 mt-4">
+                <span class="text-white/60 text-sm">Snelle ideeën:</span>
+                <button class="quick-prompt px-3 py-1 bg-purple-500/30 hover:bg-purple-500/50 text-purple-200 rounded-full text-sm transition-all">🌲 magisch bos</button>
+                <button class="quick-prompt px-3 py-1 bg-blue-500/30 hover:bg-blue-500/50 text-blue-200 rounded-full text-sm transition-all">🌊 onderwaterwereld</button>
+                <button class="quick-prompt px-3 py-1 bg-orange-500/30 hover:bg-orange-500/50 text-orange-200 rounded-full text-sm transition-all">🏜️ woestijn avontuur</button>
+                <button class="quick-prompt px-3 py-1 bg-pink-500/30 hover:bg-pink-500/50 text-pink-200 rounded-full text-sm transition-all">🌸 lente tuin</button>
+                <button class="quick-prompt px-3 py-1 bg-gray-500/30 hover:bg-gray-500/50 text-gray-200 rounded-full text-sm transition-all">🌙 sterrennacht</button>
+                <button class="quick-prompt px-3 py-1 bg-red-500/30 hover:bg-red-500/50 text-red-200 rounded-full text-sm transition-all">🌋 vulkaan eiland</button>
+            </div>
+        </div>
+
+        <!-- Canvas Container -->
+        <div class="relative">
+            <canvas id="storyCanvas" class="w-full bg-gray-900 cursor-pointer"></canvas>
+            
+            <!-- Story Narration -->
+            <div id="storyNarration" class="story-text absolute bottom-4 left-4 right-4 p-4 rounded-xl text-white text-center hidden">
+                <p id="narrationText" class="text-lg"></p>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex flex-wrap justify-center gap-4 mt-6">
+            <div class="bg-white/10 backdrop-blur-md rounded-xl p-4 text-center">
+                <p class="text-white/60 text-sm mb-1">🖱️ Klik op objecten</p>
+                <p class="text-white text-xs">Interactie & animatie</p>
+            </div>
+            <div class="bg-white/10 backdrop-blur-md rounded-xl p-4 text-center">
+                <p class="text-white/60 text-sm mb-1">⌨️ Pijltjestoetsen</p>
+                <p class="text-white text-xs">Beweeg hoofdpersonage</p>
+            </div>
+            <div class="bg-white/10 backdrop-blur-md rounded-xl p-4 text-center">
+                <p class="text-white/60 text-sm mb-1">🔄 Hover over canvas</p>
+                <p class="text-white text-xs">Parallax effect</p>
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div id="objectLegend" class="mt-6 bg-white/10 backdrop-blur-md rounded-xl p-4 hidden">
+            <h3 class="text-white font-bold mb-2">📍 Objecten in de scène:</h3>
+            <div id="legendItems" class="flex flex-wrap gap-2"></div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // 🎨 DYNAMIC STORY CANVAS GENERATOR
+        // ============================================
+
+        const canvas = document.getElementById('storyCanvas');
+        const ctx = canvas.getContext('2d');
+        const promptInput = document.getElementById('promptInput');
+        const generateBtn = document.getElementById('generateBtn');
+        const storyNarration = document.getElementById('storyNarration');
+        const narrationText = document.getElementById('narrationText');
+        const objectLegend = document.getElementById('objectLegend');
+        const legendItems = document.getElementById('legendItems');
+
+        // Canvas setup
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = Math.min(600, window.innerHeight * 0.6);
+        }
+        resizeCanvas();
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            if (currentScene) renderScene();
+        });
+
+        // ============================================
+        // 🎭 MOOD & THEME ANALYZER
+        // ============================================
+        const moodKeywords = {
+            magical: ['magisch', 'magic', 'tovenaar', 'fee', 'betoverd', 'mystiek', 'enchanted'],
+            forest: ['bos', 'forest', 'boom', 'tree', 'natuur', 'woud', 'jungle'],
+            night: ['nacht', 'night', 'donker', 'dark', 'sterren', 'stars', 'maan', 'moon'],
+            water: ['water', 'zee', 'sea', 'ocean', 'oceaan', 'onderwater', 'rivier', 'meer', 'lake'],
+            desert: ['woestijn', 'desert', 'zand', 'sand', 'kameel', 'oase', 'zon'],
+            spring: ['lente', 'spring', 'bloem', 'flower', 'tuin', 'garden', 'vlinder'],
+            winter: ['winter', 'sneeuw', 'snow', 'ijs', 'ice', 'koud', 'cold'],
+            fire: ['vuur', 'fire', 'vulkaan', 'volcano', 'lava', 'heet', 'warm'],
+            space: ['ruimte', 'space', 'planeet', 'planet', 'galaxy', 'kosmos', 'universe'],
+            happy: ['blij', 'happy', 'vrolijk', 'feest', 'party', 'vreugde'],
+            scary: ['eng', 'scary', 'spook', 'ghost', 'griezelig', 'horror', 'duister']
+        };
+
+        const colorPalettes = {
+            magical: { bg: ['#1a0533', '#2d1b4e', '#4a1a6b'], accent: ['#ff6fff', '#b366ff', '#66ffff'], particle: '#ffaaff' },
+            forest: { bg: ['#0d1f0d', '#1a3a1a', '#2d5a2d'], accent: ['#66ff66', '#33cc33', '#99ff99'], particle: '#88ff88' },
+            night: { bg: ['#0a0a1a', '#1a1a3a', '#2a2a5a'], accent: ['#ffffff', '#aaaaff', '#ffff99'], particle: '#ffffff' },
+            water: { bg: ['#001a33', '#003366', '#004d99'], accent: ['#00ffff', '#66ffff', '#99ffcc'], particle: '#66ffff' },
+            desert: { bg: ['#4a2f00', '#8b5a00', '#cc8800'], accent: ['#ffcc00', '#ff9933', '#ffff66'], particle: '#ffdd66' },
+            spring: { bg: ['#1a331a', '#336633', '#66aa66'], accent: ['#ff99cc', '#ffccff', '#ffffaa'], particle: '#ffaacc' },
+            winter: { bg: ['#1a2a3a', '#2a4a6a', '#4a7a9a'], accent: ['#ffffff', '#aaddff', '#ccffff'], particle: '#ffffff' },
+            fire: { bg: ['#1a0000', '#4d0000', '#800000'], accent: ['#ff3300', '#ff6600', '#ffcc00'], particle: '#ff6600' },
+            space: { bg: ['#000011', '#000033', '#001144'], accent: ['#ffffff', '#9999ff', '#ff99ff'], particle: '#aaaaff' },
+            happy: { bg: ['#332244', '#443366', '#554488'], accent: ['#ffff00', '#ff66ff', '#66ffff'], particle: '#ffff66' },
+            scary: { bg: ['#0a0a0a', '#1a0a1a', '#2a1a2a'], accent: ['#aa00aa', '#ff0000', '#00ff00'], particle: '#880088' },
+            default: { bg: ['#1a1a2e', '#16213e', '#0f3460'], accent: ['#e94560', '#0f3460', '#ffffff'], particle: '#e94560' }
+        };
+
+        // ============================================
+        // 🎬 SCENE OBJECTS
+        // ============================================
+        let currentScene = null;
+        let animationId = null;
+        let mouseX = 0, mouseY = 0;
+        let particles = [];
+        let interactiveObjects = [];
+        let mainCharacter = null;
+
+        class SceneObject {
+            constructor(type, x, y, width, height, color, data = {}) {
+                this.type = type;
+                this.x = x;
+                this.y = y;
+                this.baseX = x;
+                this.baseY = y;
+                this.width = width;
+                this.height = height;
+                this.color = color;
+                this.data = data;
+                this.isHovered = false;
+                this.isClicked = false;
+                this.clickAnimation = 0;
+                this.floatOffset = Math.random() * Math.PI * 2;
+                this.layer = data.layer || 1;
+                this.tooltip = data.tooltip || '';
+            }
+
+            containsPoint(px, py) {
+                return px >= this.x - this.width/2 && 
+                       px <= this.x + this.width/2 && 
+                       py >= this.y - this.height/2 && 
+                       py <= this.y + this.height/2;
+            }
+
+            onClick() {
+                this.isClicked = true;
+                this.clickAnimation = 1;
+                this.onInteract();
+            }
+
+            onInteract() {
+                // Override in specific objects
+                for (let i = 0; i < 10; i++) {
+                    particles.push(new Particle(
+                        this.x + (Math.random() - 0.5) * this.width,
+                        this.y,
+                        currentScene.palette.particle
+                    ));
+                }
+            }
+
+            update(time) {
+                if (this.data.float) {
+                    this.y = this.baseY + Math.sin(time * 0.002 + this.floatOffset) * 5;
+                }
+                if (this.clickAnimation > 0) {
+                    this.clickAnimation -= 0.05;
+                }
+            }
+
+            draw(ctx, time) {
+                // Override in specific objects
+            }
+        }
+
+        class Tree extends SceneObject {
+            constructor(x, y, size, color) {
+                super('tree', x, y, size * 0.4, size, color, { tooltip: '🌲 Magische boom', layer: 2 });
+                this.size = size;
+                this.swayOffset = Math.random() * Math.PI * 2;
+            }
+
+            draw(ctx, time) {
+                const sway = Math.sin(time * 0.001 + this.swayOffset) * 3;
+                const scale = 1 + this.clickAnimation * 0.2;
+                
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.scale(scale, scale);
+                
+                // Trunk
+                ctx.fillStyle = '#4a3728';
+                ctx.fillRect(-this.size * 0.06, -this.size * 0.3, this.size * 0.12, this.size * 0.4);
+                
+                // Foliage layers
+                const colors = [this.color, this.shadeColor(this.color, -20), this.shadeColor(this.color, 20)];
+                for (let i = 0; i < 3; i++) {
+                    ctx.fillStyle = colors[i];
+                    ctx.beginPath();
+                    ctx.moveTo(sway + 0, -this.size * 0.3 - i * this.size * 0.2);
+                    ctx.lineTo(sway * 0.5 - this.size * 0.2 + i * 0.03, -this.size * 0.1 - i * this.size * 0.15);
+                    ctx.lineTo(sway * 0.5 + this.size * 0.2 - i * 0.03, -this.size * 0.1 - i * this.size * 0.15);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+                
+                // Glow effect when clicked
+                if (this.clickAnimation > 0) {
+                    ctx.globalAlpha = this.clickAnimation * 0.5;
+                    ctx.shadowColor = this.color;
+                    ctx.shadowBlur = 30;
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    ctx.arc(0, -this.size * 0.4, this.size * 0.3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                ctx.restore();
+            }
+
+            shadeColor(color, percent) {
+                const num = parseInt(color.replace('#', ''), 16);
+                const amt = Math.round(2.55 * percent);
+                const R = (num >> 16) + amt;
+                const G = (num >> 8 & 0x00FF) + amt;
+                const B = (num & 0x0000FF) + amt;
+                return '#' + (0x1000000 + 
+                    (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 + 
+                    (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 + 
+                    (B < 255 ? B < 1 ? 0 : B : 255)
+                ).toString(16).slice(1);
+            }
+        }
+
+        class Star extends SceneObject {
+            constructor(x, y, size, color) {
+                super('star', x, y, size, size, color, { tooltip: '⭐ Twinkelende ster', layer: 0, float: true });
+                this.size = size;
+                this.twinkleOffset = Math.random() * Math.PI * 2;
+            }
+
+            draw(ctx, time) {
+                const twinkle = 0.5 + Math.sin(time * 0.005 + this.twinkleOffset) * 0.5;
+                const scale = 1 + this.clickAnimation * 0.5;
+                
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.scale(scale, scale);
+                ctx.globalAlpha = twinkle;
+                
+                // Star glow
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size * 2);
+                gradient.addColorStop(0, this.color);
+                gradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.size * 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Star points
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                for (let i = 0; i < 5; i++) {
+                    const angle = (i * Math.PI * 2 / 5) - Math.PI / 2;
+                    const innerAngle = angle + Math.PI / 5;
+                    if (i === 0) {
+                        ctx.moveTo(Math.cos(angle) * this.size, Math.sin(angle) * this.size);
+                    } else {
+                        ctx.lineTo(Math.cos(angle) * this.size, Math.sin(angle) * this.size);
+                    }
+                    ctx.lineTo(Math.cos(innerAngle) * this.size * 0.4, Math.sin(innerAngle) * this.size * 0.4);
+                }
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.restore();
+            }
+
+            onInteract() {
+                super.onInteract();
+                // Shooting star effect
+                for (let i = 0; i < 20; i++) {
+                    const p = new Particle(this.x, this.y, this.color);
+                    p.vx = (Math.random() - 0.5) * 10;
+                    p.vy = (Math.random() - 0.5) * 10;
+                    particles.push(p);
+                }
+            }
+        }
+
+        class Moon extends SceneObject {
+            constructor(x, y, size, color) {
+                super('moon', x, y, size, size, color, { tooltip: '🌙 Mystieke maan', layer: 0 });
+                this.size = size;
+            }
+
+            draw(ctx, time) {
+                const scale = 1 + this.clickAnimation * 0.3;
+                const wobble = Math.sin(time * 0.001) * 2;
+                
+                ctx.save();
+                ctx.translate(this.x + wobble, this.y);
+                ctx.scale(scale, scale);
+                
+                // Moon glow
+                const gradient = ctx.createRadialGradient(0, 0, this.size * 0.5, 0, 0, this.size * 2);
+                gradient.addColorStop(0, 'rgba(255, 255, 200, 0.3)');
+                gradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.size * 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Moon body
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Craters
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                ctx.beginPath();
+                ctx.arc(-this.size * 0.3, -this.size * 0.2, this.size * 0.15, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(this.size * 0.2, this.size * 0.3, this.size * 0.1, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+        }
+
+        class Flower extends SceneObject {
+            constructor(x, y, size, color) {
+                super('flower', x, y, size, size * 1.5, color, { tooltip: '🌸 Magische bloem', layer: 2 });
+                this.size = size;
+                this.petalCount = 5 + Math.floor(Math.random() * 3);
+            }
+
+            draw(ctx, time) {
+                const sway = Math.sin(time * 0.002 + this.x) * 5;
+                const scale = 1 + this.clickAnimation * 0.3;
+                
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.scale(scale, scale);
+                
+                // Stem
+                ctx.strokeStyle = '#228822';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.quadraticCurveTo(sway, -this.size * 0.5, 0, -this.size);
+                ctx.stroke();
+                
+                // Petals
+                ctx.translate(0, -this.size);
+                for (let i = 0; i < this.petalCount; i++) {
+                    ctx.fillStyle = this.color;
+                    ctx.save();
+                    ctx.rotate((i / this.petalCount) * Math.PI * 2);
+                    ctx.beginPath();
+                    ctx.ellipse(0, -this.size * 0.3, this.size * 0.15, this.size * 0.3, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+                
+                // Center
+                ctx.fillStyle = '#ffcc00';
+                ctx.beginPath();
+                ctx.arc(0, 0, this.size * 0.15, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+
+            onInteract() {
+                super.onInteract();
+                // Spawn butterfly
+                const butterfly = new Butterfly(this.x, this.y - 50, 15, currentScene.palette.accent[0]);
+                interactiveObjects.push(butterfly);
+            }
+        }
+
+        class Butterfly extends SceneObject {
+            constructor(x, y, size, color) {
+                super('butterfly', x, y, size, size, color, { tooltip: '🦋 Vlinder', layer: 3 });
+                this.size = size;
+                this.wingAngle = 0;
+                this.targetX = x;
+                this.targetY = y;
+            }
+
+            update(time) {
+                this.wingAngle = Math.sin(time * 0.02) * 0.5;
+                
+                // Float towards random targets
+                if (Math.random() < 0.02) {
+                    this.targetX = Math.random() * canvas.width;
+                    this.targetY = Math.random() * canvas.height * 0.7;
+                }
+                
+                this.x += (this.targetX - this.x) * 0.01;
+                this.y += (this.targetY - this.y) * 0.01;
+                this.y += Math.sin(time * 0.005) * 0.5;
+            }
+
+            draw(ctx, time) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                
+                // Wings
+                ctx.fillStyle = this.color;
+                
+                // Left wing
+                ctx.save();
+                ctx.scale(Math.cos(this.wingAngle), 1);
+                ctx.beginPath();
+                ctx.ellipse(-this.size * 0.4, 0, this.size * 0.4, this.size * 0.6, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+                
+                // Right wing
+                ctx.save();
+                ctx.scale(-Math.cos(this.wingAngle), 1);
+                ctx.beginPath();
+                ctx.ellipse(-this.size * 0.4, 0, this.size * 0.4, this.size * 0.6, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+                
+                // Body
+                ctx.fillStyle = '#333';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size * 0.1, this.size * 0.3, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+        }
+
+        class Fish extends SceneObject {
+            constructor(x, y, size, color) {
+                super('fish', x, y, size * 2, size, color, { tooltip: '🐟 Zwemmende vis', layer: 2 });
+                this.size = size;
+                this.swimOffset = Math.random() * Math.PI * 2;
+                this.direction = Math.random() > 0.5 ? 1 : -1;
+                this.speed = 0.5 + Math.random() * 1;
+            }
+
+            update(time) {
+                this.x += this.direction * this.speed;
+                this.y = this.baseY + Math.sin(time * 0.003 + this.swimOffset) * 20;
+                
+                if (this.x < -50) this.x = canvas.width + 50;
+                if (this.x > canvas.width + 50) this.x = -50;
+            }
+
+            draw(ctx, time) {
+                const tailWag = Math.sin(time * 0.02) * 0.3;
+                const scale = 1 + this.clickAnimation * 0.3;
+                
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.scale(this.direction * scale, scale);
+                
+                // Body
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size, this.size * 0.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Tail
+                ctx.save();
+                ctx.rotate(tailWag);
+                ctx.beginPath();
+                ctx.moveTo(-this.size, 0);
+                ctx.lineTo(-this.size * 1.5, -this.size * 0.4);
+                ctx.lineTo(-this.size * 1.5, this.size * 0.4);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+                
+                // Eye
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(this.size * 0.4, -this.size * 0.1, this.size * 0.15, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = 'black';
+                ctx.beginPath();
+                ctx.arc(this.size * 0.45, -this.size * 0.1, this.size * 0.07, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+
+            onInteract() {
+                super.onInteract();
+                // Speed burst
+                this.speed = 5;
+                setTimeout(() => this.speed = 0.5 + Math.random() * 1, 1000);
+            }
+        }
+
+        class Character extends SceneObject {
+            constructor(x, y, size, color) {
+                super('character', x, y, size, size * 1.5, color, { tooltip: '🧙 Hoofdpersonage', layer: 3 });
+                this.size = size;
+                this.vx = 0;
+                this.vy = 0;
+                this.isMainCharacter = true;
+            }
+
+            update(time) {
+                this.x += this.vx;
+                this.y += this.vy;
+                
+                // Boundaries
+                this.x = Math.max(this.size, Math.min(canvas.width - this.size, this.x));
+                this.y = Math.max(this.size, Math.min(canvas.height - this.size, this.y));
+                
+                // Friction
+                this.vx *= 0.95;
+                this.vy *= 0.95;
+            }
+
+            draw(ctx, time) {
+                const bounce = Math.sin(time * 0.005) * 3;
+                const scale = 1 + this.clickAnimation * 0.2;
+                
+                ctx.save();
+                ctx.translate(this.x, this.y + bounce);
+                ctx.scale(scale, scale);
+                
+                // Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.beginPath();
+                ctx.ellipse(0, this.size * 0.7, this.size * 0.4, this.size * 0.1, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Body (robe)
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.moveTo(-this.size * 0.4, this.size * 0.6);
+                ctx.lineTo(-this.size * 0.3, -this.size * 0.2);
+                ctx.lineTo(this.size * 0.3, -this.size * 0.2);
+                ctx.lineTo(this.size * 0.4, this.size * 0.6);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Head
+                ctx.fillStyle = '#ffd5b5';
+                ctx.beginPath();
+                ctx.arc(0, -this.size * 0.35, this.size * 0.25, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Hat
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.moveTo(0, -this.size * 0.9);
+                ctx.lineTo(-this.size * 0.35, -this.size * 0.35);
+                ctx.lineTo(this.size * 0.35, -this.size * 0.35);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Staff
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(this.size * 0.5, this.size * 0.6);
+                ctx.lineTo(this.size * 0.5, -this.size * 0.5);
+                ctx.stroke();
+                
+                // Staff gem
+                ctx.fillStyle = currentScene?.palette.accent[0] || '#ff66ff';
+                ctx.beginPath();
+                ctx.arc(this.size * 0.5, -this.size * 0.55, this.size * 0.1, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Glow
+                if (this.clickAnimation > 0) {
+                    ctx.globalAlpha = this.clickAnimation * 0.5;
+                    const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size);
+                    glow.addColorStop(0, currentScene?.palette.accent[0] || '#ffffff');
+                    glow.addColorStop(1, 'transparent');
+                    ctx.fillStyle = glow;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                ctx.restore();
+            }
+
+            onInteract() {
+                super.onInteract();
+                // Cast spell effect
+                for (let i = 0; i < 30; i++) {
+                    const angle = (i / 30) * Math.PI * 2;
+                    const p = new Particle(
+                        this.x + Math.cos(angle) * 20,
+                        this.y + Math.sin(angle) * 20,
+                        currentScene.palette.accent[Math.floor(Math.random() * 3)]
+                    );
+                    p.vx = Math.cos(angle) * 3;
+                    p.vy = Math.sin(angle) * 3;
+                    particles.push(p);
+                }
+            }
+        }
+
+        class Cloud extends SceneObject {
+            constructor(x, y, size, color) {
+                super('cloud', x, y, size * 2, size, color, { tooltip: '☁️ Zwevende wolk', layer: 1 });
+                this.size = size;
+                this.speed = 0.2 + Math.random() * 0.3;
+            }
+
+            update(time) {
+                this.x += this.speed;
+                if (this.x > canvas.width + this.size * 2) {
+                    this.x = -this.size * 2;
+                }
+            }
+
+            draw(ctx, time) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.globalAlpha = 0.8;
+                ctx.fillStyle = this.color;
+                
+                // Cloud puffs
+                const puffs = [
+                    { x: 0, y: 0, r: this.size * 0.5 },
+                    { x: -this.size * 0.4, y: this.size * 0.1, r: this.size * 0.35 },
+                    { x: this.size * 0.4, y: this.size * 0.1, r: this.size * 0.4 },
+                    { x: -this.size * 0.2, y: -this.size * 0.2, r: this.size * 0.3 },
+                    { x: this.size * 0.2, y: -this.size * 0.15, r: this.size * 0.35 }
+                ];
+                
+                puffs.forEach(puff => {
+                    ctx.beginPath();
+                    ctx.arc(puff.x, puff.y, puff.r, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                
+                ctx.restore();
+            }
+        }
+
+        class Sun extends SceneObject {
+            constructor(x, y, size, color) {
+                super('sun', x, y, size, size, color, { tooltip: '☀️ Stralende zon', layer: 0 });
+                this.size = size;
+            }
+
+            draw(ctx, time) {
+                const pulse = 1 + Math.sin(time * 0.003) * 0.1;
+                const scale = 1 + this.clickAnimation * 0.3;
+                
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.scale(scale * pulse, scale * pulse);
+                
+                // Sun glow
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size * 2);
+                gradient.addColorStop(0, 'rgba(255, 200, 50, 0.5)');
+                gradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.size * 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Sun rays
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 3;
+                for (let i = 0; i < 12; i++) {
+                    const angle = (i / 12) * Math.PI * 2 + time * 0.001;
+                    ctx.beginPath();
+                    ctx.moveTo(Math.cos(angle) * this.size * 1.1, Math.sin(angle) * this.size * 1.1);
+                    ctx.lineTo(Math.cos(angle) * this.size * 1.5, Math.sin(angle) * this.size * 1.5);
+                    ctx.stroke();
+                }
+                
+                // Sun body
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+        }
+
+        class Mountain extends SceneObject {
+            constructor(x, y, size, color) {
+                super('mountain', x, y, size, size, color, { tooltip: '⛰️ Majestueuze berg', layer: 1 });
+                this.size = size;
+            }
+
+            draw(ctx, time) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                
+                // Mountain body
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.moveTo(-this.size, 0);
+                ctx.lineTo(0, -this.size);
+                ctx.lineTo(this.size, 0);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Snow cap
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.moveTo(-this.size * 0.2, -this.size * 0.75);
+                ctx.lineTo(0, -this.size);
+                ctx.lineTo(this.size * 0.2, -this.size * 0.75);
+                ctx.lineTo(this.size * 0.1, -this.size * 0.7);
+                ctx.lineTo(-this.size * 0.1, -this.size * 0.72);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.restore();
+            }
+        }
+
+        class Cactus extends SceneObject {
+            constructor(x, y, size, color) {
+                super('cactus', x, y, size * 0.4, size, color, { tooltip: '🌵 Woestijn cactus', layer: 2 });
+                this.size = size;
+            }
+
+            draw(ctx, time) {
+                const scale = 1 + this.clickAnimation * 0.2;
+                
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.scale(scale, scale);
+                
+                ctx.fillStyle = this.color;
+                
+                // Main body
+                ctx.beginPath();
+                ctx.roundRect(-this.size * 0.1, -this.size * 0.8, this.size * 0.2, this.size * 0.8, 10);
+                ctx.fill();
+                
+                // Left arm
+                ctx.beginPath();
+                ctx.roundRect(-this.size * 0.3, -this.size * 0.5, this.size * 0.25, this.size * 0.1, 5);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.roundRect(-this.size * 0.3, -this.size * 0.6, this.size * 0.1, this.size * 0.2, 5);
+                ctx.fill();
+                
+                // Right arm
+                ctx.beginPath();
+                ctx.roundRect(this.size * 0.05, -this.size * 0.35, this.size * 0.25, this.size * 0.1, 5);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.roundRect(this.size * 0.2, -this.size * 0.45, this.size * 0.1, this.size * 0.2, 5);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+        }
+
+        // ============================================
+        // ✨ PARTICLE SYSTEM
+        // ============================================
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.size = 2 + Math.random() * 4;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = -Math.random() * 2 - 1;
+                this.life = 1;
+                this.decay = 0.01 + Math.random() * 0.02;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.02; // Gravity
+                this.life -= this.decay;
+            }
+
+            draw(ctx) {
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size * this.life, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        // Ambient particles (leaves, bubbles, snowflakes, etc.)
+        class AmbientParticle {
+            constructor(type, palette) {
+                this.type = type;
+                this.reset();
+                this.y = Math.random() * canvas.height;
+                this.color = palette.particle;
+            }
+
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = -20;
+                this.size = 3 + Math.random() * 5;
+                this.speed = 0.5 + Math.random() * 1;
+                this.wobble = Math.random() * Math.PI * 2;
+                this.wobbleSpeed = 0.02 + Math.random() * 0.03;
+                this.rotation = Math.random() * Math.PI * 2;
+            }
+
+            update(time) {
+                this.y += this.speed;
+                this.x += Math.sin(this.wobble) * 0.5;
+                this.wobble += this.wobbleSpeed;
+                this.rotation += 0.02;
+                
+                if (this.y > canvas.height + 20) {
+                    this.reset();
+                }
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                ctx.fillStyle = this.color;
+                
+                if (this.type === 'leaf') {
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, this.size, this.size * 0.5, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (this.type === 'snow') {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size * 0.5, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (this.type === 'bubble') {
+                    ctx.globalAlpha = 0.5;
+                    ctx.strokeStyle = this.color;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.globalAlpha = 1;
+                } else if (this.type === 'sparkle') {
+                    ctx.globalAlpha = 0.5 + Math.sin(this.wobble * 5) * 0.5;
+                    ctx.beginPath();
+                    for (let i = 0; i < 4; i++) {
+                        const angle = (i / 4) * Math.PI * 2;
+                        ctx.moveTo(0, 0);
+                        ctx.lineTo(Math.cos(angle) * this.size, Math.sin(angle) * this.size);
+                    }
+                    ctx.strokeStyle = this.color;
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    ctx.globalAlpha = 1;
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size * 0.3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                ctx.restore();
+            }
+        }
+
+        // ============================================
+        // 🎭 SCENE GENERATOR
+        // ============================================
+        function analyzePrompt(prompt) {
+            const lowerPrompt = prompt.toLowerCase();
+            const detectedMoods = [];
+            
+            for (const [mood, keywords] of Object.entries(moodKeywords)) {
+                for (const keyword of keywords) {
+                    if (lowerPrompt.includes(keyword)) {
+                        detectedMoods.push(mood);
+                        break;
+                    }
+                }
+            }
+            
+            return detectedMoods.length > 0 ? detectedMoods : ['default'];
+        }
+
+        function generateScene(prompt) {
+            const moods = analyzePrompt(prompt);
+            const primaryMood = moods[0];
+            const palette = colorPalettes[primaryMood] || colorPalettes.default;
+            
+            const scene = {
+                prompt,
+                moods,
+                palette,
+                objects: [],
+                ambientParticles: [],
+                narration: generateNarration(prompt, moods)
+            };
+
+            // Clear existing objects
+            interactiveObjects = [];
+            particles = [];
+
+            // Generate background elements based on mood
+            if (moods.includes('night') || moods.includes('space')) {
+                // Stars
+                for (let i = 0; i < 20; i++) {
+                    const star = new Star(
+                        Math.random() * canvas.width,
+                        Math.random() * canvas.height * 0.5,
+                        3 + Math.random() * 5,
+                        palette.accent[Math.floor(Math.random() * palette.accent.length)]
+                    );
+                    interactiveObjects.push(star);
+                }
+                // Moon
+                const moon = new Moon(
+                    canvas.width * 0.8,
+                    canvas.height * 0.15,
+                    40,
+                    '#fffacd'
+                );
+                interactiveObjects.push(moon);
+            }
+
+            if (moods.includes('forest') || moods.includes('magical')) {
+                // Trees
+                for (let i = 0; i < 5; i++) {
+                    const tree = new Tree(
+                        100 + i * (canvas.width - 200) / 4,
+                        canvas.height - 50,
+                        80 + Math.random() * 60,
+                        palette.accent[0]
+                    );
+                    interactiveObjects.push(tree);
+                }
+                // Ambient leaves
+                for (let i = 0; i < 15; i++) {
+                    scene.ambientParticles.push(new AmbientParticle('leaf', palette));
+                }
+            }
+
+            if (moods.includes('spring')) {
+                // Flowers
+                for (let i = 0; i < 8; i++) {
+                    const flower = new Flower(
+                        50 + Math.random() * (canvas.width - 100),
+                        canvas.height - 20 - Math.random() * 30,
+                        15 + Math.random() * 15,
+                        palette.accent[Math.floor(Math.random() * palette.accent.length)]
+                    );
+                    interactiveObjects.push(flower);
+                }
+                // Sun
+                const sun = new Sun(canvas.width * 0.15, canvas.height * 0.15, 40, '#FFD700');
+                interactiveObjects.push(sun);
+                // Clouds
+                for (let i = 0; i < 3; i++) {
+                    const cloud = new Cloud(
+                        Math.random() * canvas.width,
+                        50 + Math.random() * 100,
+                        30 + Math.random() * 20,
+                        'rgba(255,255,255,0.9)'
+                    );
+                    interactiveObjects.push(cloud);
+                }
+                // Sparkles
+                for (let i = 0; i < 20; i++) {
+                    scene.ambientParticles.push(new AmbientParticle('sparkle', palette));
+                }
+            }
+
+            if (moods.includes('water')) {
+                // Fish
+                for (let i = 0; i < 6; i++) {
+                    const fish = new Fish(
+                        Math.random() * canvas.width,
+                        100 + Math.random() * (canvas.height - 200),
+                        15 + Math.random() * 20,
+                        palette.accent[Math.floor(Math.random() * palette.accent.length)]
+                    );
+                    interactiveObjects.push(fish);
+                }
+                // Bubbles
+                for (let i = 0; i < 20; i++) {
+                    scene.ambientParticles.push(new AmbientParticle('bubble', palette));
+                }
+            }
+
+            if (moods.includes('winter')) {
+                // Mountains
+                for (let i = 0; i < 3; i++) {
+                    const mountain = new Mountain(
+                        canvas.width * 0.2 + i * canvas.width * 0.3,
+                        canvas.height,
+                        100 + Math.random() * 100,
+                        '#667788'
+                    );
+                    interactiveObjects.push(mountain);
+                }
+                // Snow
+                for (let i = 0; i < 30; i++) {
+                    scene.ambientParticles.push(new AmbientParticle('snow', palette));
+                }
+            }
+
+            if (moods.includes('desert') || moods.includes('fire')) {
+                // Sun
+                const sun = new Sun(canvas.width * 0.8, canvas.height * 0.12, 50, '#FF6600');
+                interactiveObjects.push(sun);
+                // Cacti
+                for (let i = 0; i < 4; i++) {
+                    const cactus = new Cactus(
+                        100 + i * (canvas.width - 200) / 3,
+                        canvas.height - 30,
+                        50 + Math.random() * 30,
+                        '#228B22'
+                    );
+                    interactiveObjects.push(cactus);
+                }
+            }
+
+            // Always add a main character
+            mainCharacter = new Character(
+                canvas.width / 2,
+                canvas.height - 100,
+                35,
+                palette.accent[0]
+            );
+            interactiveObjects.push(mainCharacter);
+
+            // Add some magical particles for all scenes
+            if (moods.includes('magical')) {
+                for (let i = 0; i < 25; i++) {
+                    scene.ambientParticles.push(new AmbientParticle('sparkle', palette));
+                }
+            }
+
+            // Default ambient if nothing specific
+            if (scene.ambientParticles.length === 0) {
+                for (let i = 0; i < 10; i++) {
+                    scene.ambientParticles.push(new AmbientParticle('sparkle', palette));
+                }
+            }
+
+            return scene;
+        }
+
+        function generateNarration(prompt, moods) {
+            const narrations = {
+                magical: [
+                    "In een wereld vol magie en wonderen...",
+                    "De lucht trilt van mystieke energie...",
+                    "Betoverde wezens fluisteren geheimen..."
+                ],
+                forest: [
+                    "Tussen de oude bomen ruist een zachte wind...",
+                    "Het bos ademt leven en mysterie...",
+                    "Elke schaduw verbergt een verhaal..."
+                ],
+                night: [
+                    "De sterren vertellen eeuwenoude verhalen...",
+                    "In de stilte van de nacht ontwaakt de magie...",
+                    "De maan verlicht een pad vol geheimen..."
+                ],
+                water: [
+                    "Onder het glinsterende oppervlak ligt een verborgen wereld...",
+                    "Golven dragen dromen naar verre kusten...",
+                    "Het water onthult zijn blauwe mysteries..."
+                ],
+                desert: [
+                    "De zon brandt boven eindeloos gouden zand...",
+                    "In de woestijn schuilt oeroude wijsheid...",
+                    "Elke korrel zand vertelt een verhaal..."
+                ],
+                spring: [
+                    "Bloemen openen zich voor de warme zonnestralen...",
+                    "De lente brengt nieuw leven en hoop...",
+                    "Vlinders dansen in de geurende bries..."
+                ],
+                winter: [
+                    "Sneeuw bedekt de wereld in stilte...",
+                    "De kou draagt verhalen van verre landen...",
+                    "IJskristallen glinsteren als diamanten..."
+                ],
+                fire: [
+                    "Vlammen dansen in de hitte...",
+                    "De vulkaan ademt vuur en kracht...",
+                    "In het hart van het vuur brandt passie..."
+                ],
+                space: [
+                    "Sterren en planeten zweven in eeuwige dans...",
+                    "De kosmos onthult zijn oneindige mysteries...",
+                    "In de leegte vindt men eindeloze mogelijkheden..."
+                ],
+                default: [
+                    "Een nieuw avontuur wacht...",
+                    "De wereld is vol verhalen om te ontdekken...",
+                    "Elke reis begint met een enkele stap..."
+                ]
+            };
+
+            const primaryMood = moods[0];
+            const options = narrations[primaryMood] || narrations.default;
+            return options[Math.floor(Math.random() * options.length)];
+        }
+
+        // ============================================
+        // 🎨 RENDERING
+        // ============================================
+        function drawBackground(time) {
+            const palette = currentScene.palette;
+            
+            // Gradient background
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            palette.bg.forEach((color, i) => {
+                gradient.addColorStop(i / (palette.bg.length - 1), color);
+            });
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Parallax effect based on mouse
+            const parallaxX = (mouseX - canvas.width / 2) * 0.02;
+            const parallaxY = (mouseY - canvas.height / 2) * 0.02;
+
+            // Ground
+            if (currentScene.moods.includes('forest') || currentScene.moods.includes('spring') || currentScene.moods.includes('magical')) {
+                ctx.fillStyle = '#1a3a1a';
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height);
+                ctx.lineTo(0, canvas.height - 60);
+                for (let x = 0; x <= canvas.width; x += 20) {
+                    ctx.lineTo(x, canvas.height - 60 + Math.sin(x * 0.05 + time * 0.001) * 10);
+                }
+                ctx.lineTo(canvas.width, canvas.height);
+                ctx.closePath();
+                ctx.fill();
+            } else if (currentScene.moods.includes('desert')) {
+                ctx.fillStyle = '#c2a050';
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height);
+                ctx.lineTo(0, canvas.height - 80);
+                for (let x = 0; x <= canvas.width; x += 30) {
+                    ctx.lineTo(x, canvas.height - 80 + Math.sin(x * 0.03 + parallaxX) * 20);
+                }
+                ctx.lineTo(canvas.width, canvas.height);
+                ctx.closePath();
+                ctx.fill();
+            } else if (currentScene.moods.includes('water')) {
+                // Water surface shimmer
+                ctx.fillStyle = 'rgba(100, 200, 255, 0.1)';
+                for (let i = 0; i < 5; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, 100 + i * 100);
+                    for (let x = 0; x <= canvas.width; x += 10) {
+                        ctx.lineTo(x, 100 + i * 100 + Math.sin(x * 0.02 + time * 0.002 + i) * 5);
+                    }
+                    ctx.lineTo(canvas.width, canvas.height);
+                    ctx.lineTo(0, canvas.height);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            }
+        }
+
+        function renderScene() {
+            if (!currentScene) return;
+            
+            const time = performance.now();
+            
+            // Clear and draw background
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBackground(time);
+
+            // Update and draw ambient particles
+            currentScene.ambientParticles.forEach(p => {
+                p.update(time);
+                p.draw(ctx);
+            });
+
+            // Sort objects by layer for proper depth
+            const sortedObjects = [...interactiveObjects].sort((a, b) => a.layer - b.layer);
+
+            // Update and draw all interactive objects
+            sortedObjects.forEach(obj => {
+                obj.update(time);
+                obj.draw(ctx, time);
+            });
+
+            // Update and draw particles
+            particles = particles.filter(p => p.life > 0);
+            particles.forEach(p => {
+                p.update();
+                p.draw(ctx);
+            });
+
+            // Draw tooltips for hovered objects
+            interactiveObjects.forEach(obj => {
+                if (obj.isHovered && obj.tooltip) {
+                    drawTooltip(obj);
+                }
+            });
+
+            animationId = requestAnimationFrame(renderScene);
+        }
+
+        function drawTooltip(obj) {
+            const padding = 8;
+            ctx.font = '14px Quicksand';
+            const textWidth = ctx.measureText(obj.tooltip).width;
+            
+            const tooltipX = Math.min(Math.max(obj.x, textWidth/2 + padding), canvas.width - textWidth/2 - padding);
+            const tooltipY = obj.y - obj.height/2 - 30;
+            
+            // Background
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.beginPath();
+            ctx.roundRect(tooltipX - textWidth/2 - padding, tooltipY - 12, textWidth + padding * 2, 24, 8);
+            ctx.fill();
+            
+            // Text
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(obj.tooltip, tooltipX, tooltipY);
+        }
+
+        function updateLegend() {
+            legendItems.innerHTML = '';
+            const objectTypes = new Set();
+            
+            interactiveObjects.forEach(obj => {
+                if (!objectTypes.has(obj.type)) {
+                    objectTypes.add(obj.type);
+                    const badge = document.createElement('span');
+                    badge.className = 'px-3 py-1 bg-white/20 rounded-full text-white text-sm';
+                    badge.textContent = obj.tooltip || obj.type;
+                    legendItems.appendChild(badge);
+                }
+            });
+            
+            objectLegend.classList.remove('hidden');
+        }
+
+        function showNarration(text) {
+            narrationText.textContent = text;
+            storyNarration.classList.remove('hidden');
+            
+            // Typewriter effect
+            const fullText = text;
+            narrationText.textContent = '';
+            let i = 0;
+            const typeInterval = setInterval(() => {
+                if (i < fullText.length) {
+                    narrationText.textContent += fullText[i];
+                    i++;
+                } else {
+                    clearInterval(typeInterval);
+                }
+            }, 50);
+        }
+
+        // ============================================
+        // 🎮 EVENT HANDLERS
+        // ============================================
+        generateBtn.addEventListener('click', () => {
+            const prompt = promptInput.value.trim() || 'een magisch avontuur';
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            
+            currentScene = generateScene(prompt);
+            updateLegend();
+            showNarration(currentScene.narration);
+            renderScene();
+        });
+
+        // Quick prompts
+        document.querySelectorAll('.quick-prompt').forEach(btn => {
+            btn.addEventListener('click', () => {
+                promptInput.value = btn.textContent.slice(2).trim();
+                generateBtn.click();
+            });
+        });
+
+        // Mouse interaction
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
+            
+            // Check hover states
+            interactiveObjects.forEach(obj => {
+                obj.isHovered = obj.containsPoint(mouseX, mouseY);
+            });
+        });
+
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+            
+            interactiveObjects.forEach(obj => {
+                if (obj.containsPoint(clickX, clickY)) {
+                    obj.onClick();
+                }
+            });
+        });
+
+        // Keyboard controls for character
+        document.addEventListener('keydown', (e) => {
+            if (!mainCharacter) return;
+            
+            const speed = 5;
+            switch(e.key) {
+                case 'ArrowLeft':
+                    mainCharacter.vx = -speed;
+                    break;
+                case 'ArrowRight':
+                    mainCharacter.vx = speed;
+                    break;
+                case 'ArrowUp':
+                    mainCharacter.vy = -speed;
+                    break;
+                case 'ArrowDown':
+                    mainCharacter.vy = speed;
+                    break;
+                case ' ':
+                    mainCharacter.onClick();
+                    break;
+            }
+        });
+
+        // Enter key to generate
+        promptInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                generateBtn.click();
+            }
+        });
+
+        // Initial scene
+        promptInput.value = 'een magische boswandeling bij nacht';
+        generateBtn.click();
+    </script>
+</body>
+</html>
