@@ -39,6 +39,38 @@
       height: 100%;
       background: linear-gradient(90deg, #ffcc00, #ff6600);
     }
+    #health-bar {
+      position: absolute;
+      bottom: 50px;
+      left: 20px;
+      width: 200px;
+      height: 20px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid #ff4444;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    #health-fill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #ff4444, #aa0000);
+    }
+    #hunger-bar {
+      position: absolute;
+      bottom: 80px;
+      left: 20px;
+      width: 200px;
+      height: 20px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid #44aa44;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    #hunger-fill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #44aa44, #228822);
+    }
     #time-display {
       position: absolute;
       top: 20px;
@@ -107,6 +139,8 @@
 </head>
 <body>
   <div id="instructions">Click to play<br><small>WASD to move, SHIFT to sprint, SPACE to jump</small></div>
+  <div id="health-bar"><div id="health-fill"></div></div>
+  <div id="hunger-bar"><div id="hunger-fill"></div></div>
   <div id="stamina-bar"><div id="stamina-fill"></div></div>
   <div id="time-display">12:00</div>
   <div id="item-bar">
@@ -128,7 +162,7 @@
     scene.fog = new THREE.Fog(0x87ceeb, 10, 80);
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 2, 10);
+    camera.position.set(0, 10, 20);
 
     const ambientLight = new THREE.AmbientLight(0x404040, 1.5);
     scene.add(ambientLight);
@@ -215,15 +249,121 @@
     stars.name = 'stars';
     scene.add(stars);
 
-    const groundGeometry = new THREE.PlaneGeometry(100, 100, 50, 50);
+    function noise2D(x, y) {
+      const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+      return n - Math.floor(n);
+    }
+
+    function smoothNoise(x, y) {
+      const corners = (noise2D(x-1, y-1) + noise2D(x+1, y-1) + noise2D(x-1, y+1) + noise2D(x+1, y+1)) / 16;
+      const sides = (noise2D(x-1, y) + noise2D(x+1, y) + noise2D(x, y-1) + noise2D(x, y+1)) / 8;
+      const center = noise2D(x, y) / 4;
+      return corners + sides + center;
+    }
+
+    function interpolatedNoise(x, y) {
+      const intX = Math.floor(x);
+      const fracX = x - intX;
+      const intY = Math.floor(y);
+      const fracY = y - intY;
+      
+      const v1 = smoothNoise(intX, intY);
+      const v2 = smoothNoise(intX + 1, intY);
+      const v3 = smoothNoise(intX, intY + 1);
+      const v4 = smoothNoise(intX + 1, intY + 1);
+      
+      const i1 = v1 * (1 - fracX) + v2 * fracX;
+      const i2 = v3 * (1 - fracX) + v4 * fracX;
+      
+      return i1 * (1 - fracY) + i2 * fracY;
+    }
+
+    function perlin(x, y, octaves = 4) {
+      let total = 0;
+      let frequency = 1;
+      let amplitude = 1;
+      let maxValue = 0;
+      for (let i = 0; i < octaves; i++) {
+        const val = interpolatedNoise(x * frequency, y * frequency);
+        total += (val || 0) * amplitude;
+        maxValue += amplitude;
+        amplitude *= 0.5;
+        frequency *= 2;
+      }
+      const result = total / maxValue;
+      return (result >= 0 && result <= 1) ? result : 0.5;
+    }
+
+    function getIslandHeight(x, z) {
+      const distFromCenter = Math.sqrt(x * x + z * z);
+      const maxDist = 50;
+      const islandFactor = Math.max(0, 1 - Math.pow(distFromCenter / maxDist, 2));
+      const baseHeight = perlin(x * 0.02, z * 0.02, 4) * 15 * islandFactor;
+      return Math.max(0, baseHeight - 2);
+    }
+
+    function getTerrainHeight(x, z) {
+      try {
+        const h = getIslandHeight(x, z);
+        return isNaN(h) ? 0 : Math.max(0, h);
+      } catch(e) {
+        return 0;
+      }
+    }
+
+    const islandSize = 120;
+    const segments = 60;
+    const groundGeometry = new THREE.PlaneGeometry(islandSize, islandSize, segments, segments);
+    const positions = groundGeometry.attributes.position.array;
+    const colors = [];
+    
+    for (let i = 0; i < positions.length; i += 3) {
+      const x = positions[i];
+      const z = positions[i + 1];
+      const height = getIslandHeight(x, z);
+      positions[i + 2] = height;
+      
+      let r, g, b;
+      if (height < 1.5) {
+        r = 0.76; g = 0.70; b = 0.50;
+      } else if (height < 6) {
+        r = 0.15; g = 0.35; b = 0.08;
+      } else if (height < 10) {
+        r = 0.12; g = 0.25; b = 0.06;
+      } else {
+        r = 0.08; g = 0.15; b = 0.04;
+      }
+      
+      colors.push(r, g, b);
+    }
+    
+    groundGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    groundGeometry.computeVertexNormals();
+    
     const groundMaterial = new THREE.MeshStandardMaterial({ 
-      color: 0x228b22,
+      vertexColors: true,
       roughness: 1,
-      metalness: 0
+      metalness: 0,
+      flatShading: true
     });
     const ground = new THREE.Mesh(groundGeometry, groundMaterial);
     ground.rotation.x = -Math.PI / 2;
+    ground.name = 'island';
     scene.add(ground);
+
+    const waterGeometry = new THREE.PlaneGeometry(300, 300, 50, 50);
+    const waterMaterial = new THREE.MeshStandardMaterial({
+      color: 0x006994,
+      transparent: true,
+      opacity: 0.7,
+      roughness: 0.1,
+      metalness: 0.3
+    });
+    const water = new THREE.Mesh(waterGeometry, waterMaterial);
+    water.rotation.x = -Math.PI / 2;
+    water.position.y = 0.5;
+    water.name = 'water';
+    scene.add(water);
 
     const GameTime = {
       dayTime: 8 / 24,
@@ -280,11 +420,18 @@
 
     let stamina = 100, isSprinting = false;
     let staminaInfinite = false;
+    let health = 150;
+    const maxHealth = 150;
+    let hunger = 100;
+    let isDead = false;
+    let lastGameHour = 8;
     let hasStarted = false;
     let hasFlashlight = true;
     let flashlightOn = false;
     let selectedSlot = 1;
     const staminaFill = document.getElementById('stamina-fill');
+    const healthFill = document.getElementById('health-fill');
+    const hungerFill = document.getElementById('hunger-fill');
     const instructions = document.getElementById('instructions');
     const timeDisplay = document.getElementById('time-display');
     const commandPanel = document.getElementById('command-panel');
@@ -429,15 +576,16 @@
           commandOutput.textContent = 'Flashlight given! Press 1 to select';
         } else if (cmd.startsWith('/stamina')) {
           const parts = cmd.split(' ');
-          if (parts[1] === 'infinity') {
+          const arg = parts[1] ? parts[1].toLowerCase() : '';
+          if (arg === 'infinity' || arg === 'inf') {
             staminaInfinite = true;
             stamina = 100;
             commandOutput.textContent = 'Stamina infinite enabled';
-          } else if (parts[1] === 'standard') {
+          } else if (arg === 'standard' || arg === 'normal') {
             staminaInfinite = false;
             stamina = 100;
             commandOutput.textContent = 'Stamina reset to standard';
-          } else if (parts[1]) {
+          } else if (arg) {
             const val = parseInt(parts[1]);
             if (!isNaN(val) && val >= 0 && val <= 100) {
               stamina = val;
@@ -532,12 +680,58 @@
       scene.fog.near = fog.near;
       scene.fog.far = fog.far;
       ambientLight.intensity = ambientIntensity;
-      groundMaterial.color.setRGB(grassColor.r, grassColor.g, grassColor.b);
+
+      const island = scene.getObjectByName('island');
+      if (island) {
+        const colors = island.geometry.attributes.color.array;
+        const positions = island.geometry.attributes.position.array;
+        for (let i = 0; i < colors.length; i += 3) {
+          const height = positions[(i / 3) * 3 + 2];
+          if (height < 1.5) {
+            colors[i] = 0.76 * tSmooth + 0.15 * (1 - tSmooth);
+            colors[i + 1] = 0.70 * tSmooth + 0.12 * (1 - tSmooth);
+            colors[i + 2] = 0.50 * tSmooth + 0.10 * (1 - tSmooth);
+          } else if (height < 6) {
+            colors[i] = grassColor.r;
+            colors[i + 1] = grassColor.g;
+            colors[i + 2] = grassColor.b;
+          } else if (height < 10) {
+            colors[i] = 0.12 * tSmooth + 0.03 * (1 - tSmooth);
+            colors[i + 1] = 0.25 * tSmooth + 0.05 * (1 - tSmooth);
+            colors[i + 2] = 0.06 * (1 - tSmooth);
+          } else {
+            colors[i] = 0.08 * tSmooth + 0.02 * (1 - tSmooth);
+            colors[i + 1] = 0.15 * tSmooth + 0.03 * (1 - tSmooth);
+            colors[i + 2] = 0.04 * (1 - tSmooth);
+          }
+        }
+        island.geometry.attributes.color.needsUpdate = true;
+      }
+
+      const water = scene.getObjectByName('water');
+      if (water) {
+        const nightWater = { r: 0.02, g: 0.05, b: 0.15 };
+        const dayWater = { r: 0.0, g: 0.41, b: 0.58 };
+        water.material.color.setRGB(
+          nightWater.r + (dayWater.r - nightWater.r) * tSmooth,
+          nightWater.g + (dayWater.g - nightWater.g) * tSmooth,
+          nightWater.b + (dayWater.b - nightWater.b) * tSmooth
+        );
+        water.material.opacity = 0.5 + tSmooth * 0.3;
+      }
 
       const hours = Math.floor(GameTime.getCurrentGameHour());
       const minutes = Math.floor((GameTime.getCurrentGameHour() - hours) * 60);
       timeDisplay.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
       timeDisplay.style.color = GameTime.isDay() ? 'white' : '#888';
+
+      if (!isDead && hours !== lastGameHour) {
+        if (health < maxHealth && hunger > 0) {
+          health = Math.min(maxHealth, health + 5);
+        }
+        hunger = Math.max(0, hunger - 5);
+        lastGameHour = hours;
+      }
     }
 
     let prevTime = performance.now();
@@ -594,16 +788,23 @@
           camera.position.addScaledVector(right, direction.x * speed * delta);
         }
 
+        const terrainHeight = getTerrainHeight(camera.position.x, camera.position.z);
+        const waterLevel = 0.5;
+        const playerHeight = 1.6;
+        const actualGround = Math.max(terrainHeight, waterLevel);
+        
         velocityY += gravity * delta;
         camera.position.y += velocityY * delta;
 
-        if (camera.position.y < groundLevel) {
+        if (camera.position.y < actualGround + playerHeight) {
           velocityY = 0;
-          camera.position.y = groundLevel;
+          camera.position.y = actualGround + playerHeight;
           canJump = true;
         }
 
         staminaFill.style.width = stamina + '%';
+        healthFill.style.width = (health / maxHealth * 100) + '%';
+        hungerFill.style.width = hunger + '%';
       }
 
       renderer.render(scene, camera);
