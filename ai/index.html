@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Model Test Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="#" class="logo" onclick="showSection('home')">
+                <span class="logo-icon">⚡</span>
+                <span class="logo-text">AITestHub</span>
+            </a>
+            <div class="nav-links">
+                <a href="#home" class="nav-link active" data-section="home">Home</a>
+                <a href="#models" class="nav-link" data-section="models">Models</a>
+                <a href="#tests" class="nav-link" data-section="tests">Tests</a>
+                <a href="#leaderboard" class="nav-link" data-section="leaderboard">Leaderboard</a>
+            </div>
+            <div class="nav-auth">
+                <button class="btn-ghost" id="loginBtn" onclick="openModal('login')">Login</button>
+                <button class="btn-primary" id="signupBtn" onclick="openModal('signup')">Sign Up</button>
+                <div class="user-menu hidden" id="userMenu">
+                    <div class="user-avatar" id="userAvatar">U</div>
+                    <span class="user-name" id="userName">User</span>
+                    <button class="btn-ghost" onclick="logout()">Logout</button>
+                </div>
+            </div>
+            <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
+        </div>
+        <div class="mobile-nav hidden" id="mobileNav">
+            <a href="#home" class="nav-link" data-section="home">Home</a>
+            <a href="#models" class="nav-link" data-section="models">Models</a>
+            <a href="#tests" class="nav-link" data-section="tests">Tests</a>
+            <a href="#leaderboard" class="nav-link" data-section="leaderboard">Leaderboard</a>
+            <div class="mobile-auth" id="mobileAuth"></div>
+        </div>
+    </nav>
+
+    <main>
+        <!-- Home Section -->
+        <section id="home" class="section active">
+            <div class="hero">
+                <div class="hero-bg">
+                    <div class="gradient-orb orb-1"></div>
+                    <div class="gradient-orb orb-2"></div>
+                    <div class="gradient-orb orb-3"></div>
+                </div>
+                <div class="hero-content">
+                    <h1 class="hero-title">
+                        Discover & Test
+                        <span class="gradient-text">AI Models</span>
+                    </h1>
+                    <p class="hero-subtitle">
+                        Your ultimate platform to explore, test, and compare the latest AI models. 
+                        Create tests, share results, and join the community of AI enthusiasts.
+                    </p>
+                    <div class="hero-actions">
+                        <button class="btn-primary btn-lg" onclick="showSection('models')">
+                            <span>Explore Models</span>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                        </button>
+                        <button class="btn-outline btn-lg" onclick="showSection('tests')">
+                            <span>Take a Test</span>
+                        </button>
+                    </div>
+                    <div class="hero-stats">
+                        <div class="stat-item">
+                            <span class="stat-number" id="totalModels">0</span>
+                            <span class="stat-label">AI Models</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number" id="totalTests">0</span>
+                            <span class="stat-label">Tests Created</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number" id="totalResults">0</span>
+                            <span class="stat-label">Test Results</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="featured-section">
+                <h2 class="section-title">Featured Models</h2>
+                <div class="featured-grid" id="featuredModels"></div>
+            </div>
+        </section>
+
+        <!-- Models Section -->
+        <section id="models" class="section">
+            <div class="section-header">
+                <h1 class="section-title">AI Model Catalog</h1>
+                <p class="section-subtitle">Discover and explore the latest AI models</p>
+            </div>
+            <div class="filters-bar">
+                <div class="search-box">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    <input type="text" placeholder="Search models..." id="modelSearch" oninput="filterModels()">
+                </div>
+                <div class="filter-group">
+                    <select id="categoryFilter" onchange="filterModels()">
+                        <option value="">All Categories</option>
+                        <option value="llm">LLM</option>
+                        <option value="image">Image Generation</option>
+                        <option value="audio">Audio</option>
+                        <option value="coding">Coding</option>
+                        <option value="multimodal">Multimodal</option>
+                    </select>
+                    <select id="sortFilter" onchange="filterModels()">
+                        <option value="rating">Top Rated</option>
+                        <option value="popular">Most Popular</option>
+                        <option value="newest">Newest</option>
+                    </select>
+                </div>
+            </div>
+            <div class="models-grid" id="modelsGrid"></div>
+            <div class="empty-state hidden" id="modelsEmpty">
+                <div class="empty-icon">🔍</div>
+                <h3>No models found</h3>
+                <p>Try adjusting your search or filters</p>
+            </div>
+        </section>
+
+        <!-- Tests Section -->
+        <section id="tests" class="section">
+            <div class="section-header">
+                <h1 class="section-title">AI Tests</h1>
+                <p class="section-subtitle">Create and take tests to evaluate AI capabilities</p>
+            </div>
+            <div class="tests-actions">
+                <button class="btn-primary" id="createTestBtn" onclick="openModal('createTest')">
+                    <span>+ Create Test</span>
+                </button>
+            </div>
+            <div class="tests-grid" id="testsGrid"></div>
+            <div class="empty-state hidden" id="testsEmpty">
+                <div class="empty-icon">📝</div>
+                <h3>No tests yet</h3>
+                <p>Create your first test to get started</p>
+            </div>
+        </section>
+
+        <!-- Leaderboard Section -->
+        <section id="leaderboard" class="section">
+            <div class="section-header">
+                <h1 class="section-title">Leaderboard</h1>
+                <p class="section-subtitle">Top performers and highly-rated models</p>
+            </div>
+            <div class="leaderboard-tabs">
+                <button class="tab-btn active" data-tab="models" onclick="switchLeaderboardTab('models')">Top Models</button>
+                <button class="tab-btn" data-tab="users" onclick="switchLeaderboardTab('users')">Top Testers</button>
+                <button class="tab-btn" data-tab="scores" onclick="switchLeaderboardTab('scores')">High Scores</button>
+            </div>
+            <div class="leaderboard-content">
+                <div class="tab-panel active" id="leaderboardModels"></div>
+                <div class="tab-panel" id="leaderboardUsers"></div>
+                <div class="tab-panel" id="leaderboardScores"></div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <span class="logo-icon">⚡</span>
+                <span>AITestHub</span>
+            </div>
+            <p class="footer-text">Your platform for AI model testing and evaluation</p>
+            <div class="footer-links">
+                <a href="#">About</a>
+                <a href="#">Privacy</a>
+                <a href="#">Terms</a>
+                <a href="#">Contact</a>
+            </div>
+            <p class="footer-copyright">© 2026 AI Test Hub. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Login Modal -->
+    <div class="modal-overlay hidden" id="loginModal" onclick="closeModalOnOverlay(event, 'login')">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal('login')">×</button>
+            <div class="modal-header">
+                <h2>Welcome Back</h2>
+                <p>Sign in to continue</p>
+            </div>
+            <form class="modal-form" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="loginEmail" required placeholder="your@email.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" required placeholder="••••••••">
+                </div>
+                <button type="submit" class="btn-primary btn-full">Sign In</button>
+            </form>
+            <p class="modal-footer">
+                Don't have an account? <a href="#" onclick="switchModal('login', 'signup')">Sign up</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Signup Modal -->
+    <div class="modal-overlay hidden" id="signupModal" onclick="closeModalOnOverlay(event, 'signup')">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal('signup')">×</button>
+            <div class="modal-header">
+                <h2>Create Account</h2>
+                <p>Join our community</p>
+            </div>
+            <form class="modal-form" onsubmit="handleSignup(event)">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="signupName" required placeholder="Choose a username">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="signupEmail" required placeholder="your@email.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="signupPassword" required placeholder="••••••••" minlength="6">
+                </div>
+                <button type="submit" class="btn-primary btn-full">Create Account</button>
+            </form>
+            <p class="modal-footer">
+                Already have an account? <a href="#" onclick="switchModal('signup', 'login')">Sign in</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Model Detail Modal -->
+    <div class="modal-overlay hidden" id="modelDetailModal" onclick="closeModalOnOverlay(event, 'modelDetail')">
+        <div class="modal modal-lg" id="modelDetailContent"></div>
+    </div>
+
+    <!-- Take Test Modal -->
+    <div class="modal-overlay hidden" id="testModal" onclick="closeModalOnOverlay(event, 'test')">
+        <div class="modal modal-lg">
+            <button class="modal-close" onclick="closeModal('test')">×</button>
+            <div class="test-container" id="testContainer"></div>
+        </div>
+    </div>
+
+    <!-- Create Test Modal -->
+    <div class="modal-overlay hidden" id="createTestModal" onclick="closeModalOnOverlay(event, 'createTest')">
+        <div class="modal modal-lg">
+            <button class="modal-close" onclick="closeModal('createTest')">×</button>
+            <div class="modal-header">
+                <h2>Create New Test</h2>
+                <p>Design a test to evaluate AI models</p>
+            </div>
+            <form class="modal-form" onsubmit="handleCreateTest(event)">
+                <div class="form-group">
+                    <label>Test Title</label>
+                    <input type="text" id="testTitle" required placeholder="e.g., Coding Ability Test">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="testDescription" required placeholder="Describe what this test evaluates..."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="testCategory" required>
+                            <option value="llm">LLM</option>
+                            <option value="image">Image Generation</option>
+                            <option value="audio">Audio</option>
+                            <option value="coding">Coding</option>
+                            <option value="reasoning">Reasoning</option>
+                            <option value="general">General</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Difficulty</label>
+                        <select id="testDifficulty" required>
+                            <option value="beginner">Beginner</option>
+                            <option value="intermediate">Intermediate</option>
+                            <option value="advanced">Advanced</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="questions-builder" id="questionsBuilder">
+                    <div class="questions-header">
+                        <h3>Questions</h3>
+                        <button type="button" class="btn-outline btn-sm" onclick="addQuestion()">+ Add Question</button>
+                    </div>
+                    <div id="questionsList"></div>
+                </div>
+                <button type="submit" class="btn-primary btn-full">Create Test</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Result Modal -->
+    <div class="modal-overlay hidden" id="resultModal" onclick="closeModalOnOverlay(event, 'result')">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal('result')">×</button>
+            <div class="result-container" id="resultContainer"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
