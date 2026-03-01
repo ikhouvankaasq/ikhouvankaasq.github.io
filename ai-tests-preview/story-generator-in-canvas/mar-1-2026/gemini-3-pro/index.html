@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Story-Driven Canvas Generator</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #1a1a1a; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+        .pointer-events-auto { pointer-events: auto; }
+        canvas { display: block; }
+    </style>
+</head>
+<body class="font-sans text-white">
+
+    <!-- UI Layer -->
+    <div id="ui-layer" class="flex flex-col justify-between p-6">
+        
+        <!-- Top Control Bar -->
+        <div class="pointer-events-auto bg-gray-900/80 backdrop-blur-md p-4 rounded-xl shadow-2xl border border-gray-700 max-w-2xl mx-auto w-full transition-all hover:bg-gray-900/90">
+            <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent mb-2">Dynamic Story Canvas</h1>
+            <div class="flex gap-2">
+                <input type="text" id="promptInput" placeholder="Enter a scene (e.g., 'magical forest', 'cyberpunk city', 'deep space', 'underwater world')" 
+                       class="flex-1 px-4 py-2 rounded-lg bg-gray-800 border border-gray-600 focus:border-blue-500 focus:outline-none text-white placeholder-gray-400">
+                <button id="generateBtn" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors shadow-lg shadow-blue-900/50">
+                    Generate Scene
+                </button>
+            </div>
+            <p class="text-xs text-gray-400 mt-2 italic" id="statusText">Ready to dream...</p>
+        </div>
+
+        <!-- Bottom Story/Info Box -->
+        <div id="storyBox" class="pointer-events-auto bg-gray-900/80 backdrop-blur-md p-6 rounded-xl shadow-2xl border border-gray-700 max-w-3xl mx-auto w-full opacity-0 translate-y-10 transition-all duration-700">
+            <h2 id="storyTitle" class="text-xl font-bold text-yellow-400 mb-1">...</h2>
+            <p id="storyDescription" class="text-gray-200 leading-relaxed">...</p>
+        </div>
+    </div>
+
+    <canvas id="mainCanvas"></canvas>
+
+    <script>
+        /**
+         * Dynamic Story-Driven Canvas Generator
+         * Generates procedural scenes based on keyword heuristics.
+         */
+
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+        const uiPrompt = document.getElementById('promptInput');
+        const uiBtn = document.getElementById('generateBtn');
+        const uiStatus = document.getElementById('statusText');
+        const uiStoryBox = document.getElementById('storyBox');
+        const uiTitle = document.getElementById('storyTitle');
+        const uiDesc = document.getElementById('storyDescription');
+
+        let width, height;
+        let animationId;
+        
+        // State
+        const state = {
+            objects: [],
+            particles: [],
+            theme: 'default',
+            time: 0,
+            mouseX: 0,
+            mouseY: 0
+        };
+
+        // Resize handling
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Mouse tracking
+        window.addEventListener('mousemove', (e) => {
+            state.mouseX = e.clientX;
+            state.mouseY = e.clientY;
+            
+            // Check hover states
+            let hovering = false;
+            for (const obj of state.objects) {
+                if (obj.isPointInside(state.mouseX, state.mouseY)) {
+                    hovering = true;
+                    obj.isHovered = true;
+                } else {
+                    obj.isHovered = false;
+                }
+            }
+            canvas.style.cursor = hovering ? 'pointer' : 'default';
+        });
+
+        window.addEventListener('click', (e) => {
+            for (const obj of state.objects) {
+                if (obj.isPointInside(state.mouseX, state.mouseY)) {
+                    obj.interact();
+                    spawnParticles(e.clientX, e.clientY, 10, obj.color);
+                }
+            }
+        });
+
+        // ----------------------
+        // Theme & Logic System
+        // ----------------------
+
+        const THEMES = {
+            forest: {
+                bg: ['#1a2f1a', '#2d4a2d', '#0f1f0f'],
+                ground: '#3e2723',
+                primary: '#4caf50',
+                secondary: '#81c784',
+                mood: 'peaceful',
+                particle: 'leaf'
+            },
+            space: {
+                bg: ['#000000', '#1a0b2e', '#0f0f1f'],
+                ground: 'transparent',
+                primary: '#e040fb',
+                secondary: '#00bcd4',
+                mood: 'mysterious',
+                particle: 'star'
+            },
+            underwater: {
+                bg: ['#001f3f', '#003366', '#001a33'],
+                ground: '#e6c288', // sand
+                primary: '#00bcd4',
+                secondary: '#ff4081', // coral
+                mood: 'fluid',
+                particle: 'bubble'
+            },
+            cyberpunk: {
+                bg: ['#0d0221', '#240046', '#000000'],
+                ground: '#1a1a1a',
+                primary: '#ff00ff',
+                secondary: '#00ffff',
+                mood: 'electric',
+                particle: 'glitch'
+            },
+            default: {
+                bg: ['#222', '#333'],
+                ground: '#444',
+                primary: '#ddd',
+                secondary: '#aaa',
+                mood: 'neutral',
+                particle: 'dot'
+            }
+        };
+
+        function analyzePrompt(text) {
+            text = text.toLowerCase();
+            if (text.includes('forest') || text.includes('nature') || text.includes('wood') || text.includes('garden')) return 'forest';
+            if (text.includes('space') || text.includes('galaxy') || text.includes('star') || text.includes('moon')) return 'space';
+            if (text.includes('water') || text.includes('ocean') || text.includes('sea') || text.includes('fish')) return 'underwater';
+            if (text.includes('city') || text.includes('cyber') || text.includes('neon') || text.includes('future')) return 'cyberpunk';
+            return 'default';
+        }
+
+        // ----------------------
+        // Object Classes
+        // ----------------------
+
+        class SceneObject {
+            constructor(x, y, type, themeData) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.theme = themeData;
+                this.isHovered = false;
+                this.scale = 1;
+                this.targetScale = 1;
+                this.color = themeData.primary;
+                this.message = "Just an object.";
+                this.rotation = 0;
+            }
+
+            update() {
+                // Smooth hover effect
+                this.targetScale = this.isHovered ? 1.15 : 1.0;
+                this.scale += (this.targetScale - this.scale) * 0.1;
+                this.rotation += 0.005;
+            }
+
+            draw(ctx) { }
+            isPointInside(x, y) { return false; }
+            interact() {
+                showStoryBubble(this.message);
+                if (window.showTextBubble) showTextBubble(this.x, this.y - 50, this.message);
+                this.bounce();
+            }
+            bounce() { this.scale = 1.4; }
+        }
+
+        class Tree extends SceneObject {
+            constructor(x, y, themeData) {
+                super(x, y, 'tree', themeData);
+                this.color = `hsl(${100 + Math.random()*40}, 60%, 40%)`; // Varying greens
+                this.trunkColor = '#5D4037';
+                this.size = 80 + Math.random() * 60;
+                this.message = "An ancient sentinel of the forest.";
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.scale(this.scale, this.scale);
+
+                // Trunk
+                ctx.fillStyle = this.trunkColor;
+                ctx.fillRect(-10, -this.size/4, 20, this.size/4);
+
+                // Layers of leaves
+                ctx.fillStyle = this.color;
+                for(let i=0; i<3; i++) {
+                    ctx.beginPath();
+                    const yPos = -this.size/4 - (i * this.size/3);
+                    const width = this.size/2 * (3-i)/3 + 20;
+                    ctx.moveTo(0, yPos - this.size/3);
+                    ctx.lineTo(-width, yPos + 10);
+                    ctx.lineTo(width, yPos + 10);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+
+            isPointInside(x, y) {
+                return Math.abs(x - this.x) < 40 && y < this.y + 20 && y > this.y - this.size;
+            }
+        }
+
+        class Planet extends SceneObject {
+            constructor(x, y, themeData) {
+                super(x, y, 'planet', themeData);
+                this.radius = 20 + Math.random() * 60;
+                this.color = `hsl(${Math.random()*360}, 70%, 60%)`;
+                this.ring = Math.random() > 0.4;
+                this.message = "A mysterious celestial body.";
+                this.textureOffset = Math.random() * 100;
+                this.craterSeed = Math.random();
+            }
+
+            update() {
+                super.update();
+                this.textureOffset += 0.05;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.scale(this.scale, this.scale);
+
+                // Planet Body
+                const grad = ctx.createRadialGradient(-10, -10, 0, 0, 0, this.radius);
+                grad.addColorStop(0, '#fff');
+                grad.addColorStop(0.3, this.color);
+                grad.addColorStop(1, '#000');
+                
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = grad;
+                ctx.fill();
+
+                // Simple texture (craters/bands) using offset
+                ctx.save();
+                ctx.clip(); // Clip to planet
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                for(let i=0; i<3; i++) {
+                     ctx.beginPath();
+                     // Moving bands
+                     const yPos = -this.radius + ((this.textureOffset * 10 + i * 40) % (this.radius * 2));
+                     ctx.ellipse(0, yPos, this.radius, this.radius * 0.2, 0.2, 0, Math.PI*2);
+                     ctx.fill();
+                }
+                ctx.restore();
+
+                // Ring
+                if (this.ring) {
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, this.radius * 1.8, this.radius * 0.4, 0.3, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+                    ctx.lineWidth = 5;
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            isPointInside(x, y) {
+                const dx = x - this.x;
+                const dy = y - this.y;
+                return Math.sqrt(dx*dx + dy*dy) < this.radius;
+            }
+        }
+
+        class Fish extends SceneObject {
+            constructor(x, y, themeData) {
+                super(x, y, 'fish', themeData);
+                this.width = 40 + Math.random() * 30;
+                this.height = 20 + Math.random() * 15;
+                this.color = `hsl(${180 + Math.random()*60}, 80%, 60%)`;
+                this.speed = (Math.random() * 2 + 1) * (Math.random() > 0.5 ? 1 : -1);
+                this.message = "A curious glowing fish.";
+            }
+
+            update() {
+                super.update();
+                this.x += this.speed;
+                if(this.x > width + 50) this.x = -50;
+                if(this.x < -50) this.x = width + 50;
+                this.y += Math.sin(state.time * 0.1 + this.x * 0.1) * 0.5;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.scale(this.speed > 0 ? this.scale : -this.scale, this.scale); 
+
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.width/2, this.height/2, 0, 0, Math.PI*2);
+                ctx.fill();
+                
+                ctx.beginPath();
+                ctx.moveTo(-this.width/2, 0);
+                ctx.lineTo(-this.width/2 - 15, -10);
+                ctx.lineTo(-this.width/2 - 15, 10);
+                ctx.fill();
+                
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(this.width/4, -5, 3, 0, Math.PI*2);
+                ctx.fill();
+                ctx.fillStyle = 'black';
+                ctx.beginPath();
+                ctx.arc(this.width/4 + 1, -5, 1, 0, Math.PI*2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            isPointInside(x, y) {
+                return Math.abs(x - this.x) < this.width/2 + 10 && Math.abs(y - this.y) < this.height/2 + 10;
+            }
+        }
+
+        class Building extends SceneObject {
+            constructor(x, y, themeData) {
+                super(x, y, 'building', themeData);
+                this.w = 40 + Math.random() * 60;
+                this.h = 100 + Math.random() * 200;
+                this.color = `hsl(${260 + Math.random()*60}, 60%, 20%)`; 
+                this.windows = [];
+                for(let i=0; i<15; i++) {
+                    // Pre-calculate window positions and state
+                    if(Math.random() > 0.3) {
+                        this.windows.push({
+                            x: Math.random(), 
+                            y: Math.random(),
+                            on: Math.random() > 0.5,
+                            flickerSpeed: Math.random() * 0.1
+                        });
+                    }
+                }
+                this.message = "A skyscraper reaching for the neon sky.";
+            }
+
+            update() {
+                super.update();
+                // Slowly toggle windows
+                this.windows.forEach(w => {
+                    if (Math.random() < w.flickerSpeed * 0.1) w.on = !w.on;
+                });
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.scale(this.scale, this.scale);
+
+                // Main block
+                ctx.fillStyle = this.color;
+                ctx.fillRect(-this.w/2, -this.h, this.w, this.h);
+                
+                // Neon glow line
+                ctx.strokeStyle = '#0ff';
+                ctx.lineWidth = 2;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#0ff';
+                ctx.strokeRect(-this.w/2, -this.h, this.w, this.h);
+                ctx.shadowBlur = 0;
+
+                // Windows
+                this.windows.forEach(win => {
+                    if (!win.on) return;
+                    ctx.fillStyle = Math.random() > 0.8 ? '#ff00ff' : '#ffff00';
+                    const wx = -this.w/2 + 5 + win.x * (this.w - 15);
+                    const wy = -this.h + 5 + win.y * (this.h - 15);
+                    ctx.fillRect(wx, wy, 6, 8);
+                });
+
+                ctx.restore();
+            }
+
+            isPointInside(x, y) {
+                return Math.abs(x - this.x) < this.w/2 && y < this.y && y > this.y - this.h;
+            }
+        }
+        
+        // ----------------------
+        // Particle System
+        // ----------------------
+
+        class Particle {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.life = 1.0;
+                this.size = Math.random() * 3 + 1;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                
+                if (type === 'leaf') {
+                    this.vy = Math.random() * 1.5 + 0.5; // Fall down
+                    this.color = `hsl(${30 + Math.random()*30}, 80%, 50%)`;
+                } else if (type === 'bubble') {
+                    this.vy = -Math.random() * 1.5 - 0.5; // Float up
+                    this.color = 'rgba(255, 255, 255, 0.4)';
+                } else if (type === 'glitch') {
+                    this.color = Math.random() > 0.5 ? '#0ff' : '#f0f';
+                    this.vx = (Math.random() - 0.5) * 10; // Fast horizontal
+                    this.vy = 0;
+                } else if (type === 'star') {
+                    this.color = '#fff';
+                    this.vy = 0; 
+                    this.vx = 0;
+                    this.life = Math.random() * 2; // Twinkle duration
+                } else {
+                    this.color = '#fff';
+                }
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= 0.01;
+                
+                if (this.type === 'leaf') {
+                    this.x += Math.sin(state.time * 0.1 + this.y * 0.05); // Sway
+                    this.rotation = state.time * 0.1;
+                } else if (this.type === 'bubble') {
+                    this.x += Math.sin(state.time * 0.2 + this.y * 0.1) * 0.5;
+                }
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, Math.min(1, this.life));
+                ctx.fillStyle = this.color;
+                
+                if (this.type === 'star') {
+                    const flicker = Math.random() > 0.9 ? 0 : 1;
+                    if(flicker) ctx.fillRect(this.x, this.y, this.size, this.size);
+                } else if (this.type === 'leaf') {
+                    ctx.translate(this.x, this.y);
+                    ctx.rotate(this.rotation || 0);
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, this.size * 2, this.size, 0, 0, Math.PI*2);
+                    ctx.fill();
+                } else if (this.type === 'glitch') {
+                    ctx.fillRect(this.x, this.y, this.size * 5, this.size);
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+        }
+
+        // Active text bubble system
+        let activeBubble = null;
+
+        function showTextBubble(x, y, text) {
+            activeBubble = { x, y, text, life: 100, alpha: 1 };
+        }
+
+        function drawActiveBubble(ctx) {
+            if (!activeBubble) return;
+
+            activeBubble.life--;
+            activeBubble.y -= 0.5; // Float up
+            if (activeBubble.life < 20) activeBubble.alpha = activeBubble.life / 20;
+
+            if (activeBubble.life <= 0) {
+                activeBubble = null;
+                return;
+            }
+
+            ctx.save();
+            ctx.globalAlpha = activeBubble.alpha;
+            ctx.font = '14px sans-serif';
+            const padding = 10;
+            const textWidth = ctx.measureText(activeBubble.text).width;
+            
+            // Box
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.beginPath();
+            ctx.roundRect(activeBubble.x - textWidth/2 - padding, activeBubble.y - 30, textWidth + padding*2, 24, 5);
+            ctx.fill();
+            
+            // Triangle pointer
+            ctx.beginPath();
+            ctx.moveTo(activeBubble.x, activeBubble.y - 6);
+            ctx.lineTo(activeBubble.x - 5, activeBubble.y - 15);
+            ctx.lineTo(activeBubble.x + 5, activeBubble.y - 15);
+            ctx.fill();
+
+            // Text
+            ctx.fillStyle = '#fff';
+            ctx.textAlign = 'center';
+            ctx.fillText(activeBubble.text, activeBubble.x, activeBubble.y - 14);
+
+            ctx.restore();
+        }
+
+        function spawnParticles(x, y, count, color) {
+            for(let i=0; i<count; i++) {
+                state.particles.push(new Particle(x, y, THEMES[state.theme].particle));
+            }
+        }
+
+        // ----------------------
+        // Main Loop & Generation
+        // ----------------------
+
+        function generateScene() {
+            const prompt = uiPrompt.value;
+            const themeKey = analyzePrompt(prompt);
+            const theme = THEMES[themeKey];
+            state.theme = themeKey;
+            
+            uiStatus.textContent = `Generated theme: ${themeKey.toUpperCase()}`;
+            uiStoryBox.classList.add('opacity-0', 'translate-y-10'); // Hide story box initially
+            
+            // Generate Story
+            setTimeout(() => {
+                const adjectives = ['wondrous', 'silent', 'vibrant', 'chaotic', 'serene', 'glowing'];
+                const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+                uiTitle.textContent = `The ${adj} ${themeKey}`;
+                
+                const descriptions = {
+                    forest: "Ancient trees whisper secrets as leaves dance in the breeze. The air smells of pine and earth.",
+                    space: "Galaxies spiral in the infinite void. Stars twinkle with the promise of unknown worlds.",
+                    underwater: "Bioluminescent creatures drift through the deep blue. Bubbles rise from the mysterious depths.",
+                    cyberpunk: "Neon lights flicker against the rain-slicked pavement. The hum of the city is electric and alive.",
+                    default: "Abstract shapes float in a void of potential. Anything is possible here."
+                };
+                
+                uiDesc.textContent = descriptions[themeKey] || descriptions.default;
+                uiStoryBox.classList.remove('opacity-0', 'translate-y-10');
+            }, 500);
+
+            // Reset State
+            state.objects = [];
+            state.particles = [];
+
+            // Populate Objects
+            const count = 6 + Math.floor(Math.random() * 8); // More objects
+            
+            // Sort by Y for depth layering (painters algorithm) usually, but we do random here.
+            // We'll sort before drawing.
+
+            for (let i = 0; i < count; i++) {
+                let obj;
+                const x = Math.random() * width;
+                
+                if (themeKey === 'forest') {
+                    // Trees on the ground
+                    const y = height * 0.6 + Math.random() * (height * 0.4); 
+                    obj = new Tree(x, y, theme);
+                } else if (themeKey === 'space') {
+                    // Planets anywhere
+                    const y = Math.random() * height * 0.8;
+                    obj = new Planet(x, y, theme);
+                } else if (themeKey === 'underwater') {
+                    // Fish swimming anywhere
+                    const y = Math.random() * height;
+                    obj = new Fish(x, y, theme);
+                } else if (themeKey === 'cyberpunk') {
+                    // Buildings from bottom
+                    const y = height; 
+                    obj = new Building(x, y, theme);
+                } else {
+                    // Default abstract
+                    const y = Math.random() * height;
+                    obj = new Planet(x, y, theme); // Fallback
+                }
+                
+                state.objects.push(obj);
+            }
+
+            // Add some initial particles
+            spawnParticles(width/2, height/2, 50, '#fff');
+        }
+
+        function showStoryBubble(text) {
+            uiDesc.textContent = text;
+            // Visual feedback on the box
+            uiStoryBox.classList.add('scale-105', 'bg-gray-800');
+            setTimeout(() => uiStoryBox.classList.remove('scale-105', 'bg-gray-800'), 200);
+        }
+
+        function drawBackground() {
+            const theme = THEMES[state.theme];
+            
+            // Gradient Background
+            const grad = ctx.createLinearGradient(0, 0, 0, height);
+            theme.bg.forEach((color, i) => {
+                grad.addColorStop(i / (theme.bg.length - 1), color);
+            });
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, width, height);
+
+            // Theme Specific Background Elements
+            if (state.theme === 'space') {
+                // Static stars
+                ctx.fillStyle = 'white';
+                for(let i=0; i<50; i++) {
+                    const x = (i * 137) % width;
+                    const y = (i * 243) % height;
+                    ctx.globalAlpha = Math.random() * 0.5 + 0.2;
+                    ctx.fillRect(x, y, 1, 1);
+                }
+                ctx.globalAlpha = 1.0;
+            }
+
+            if (state.theme === 'forest') {
+                 // Distant mountains
+                 ctx.fillStyle = '#1b3b1b';
+                 ctx.beginPath();
+                 ctx.moveTo(0, height * 0.6);
+                 for(let i=0; i<=width; i+=50) {
+                     ctx.lineTo(i, height * 0.6 - Math.sin(i * 0.01) * 50);
+                 }
+                 ctx.lineTo(width, height);
+                 ctx.lineTo(0, height);
+                 ctx.fill();
+            }
+            
+            if (state.theme === 'cyberpunk') {
+                // Grid floor
+                ctx.strokeStyle = 'rgba(255, 0, 255, 0.2)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                for(let i=0; i<width; i+=40) {
+                    ctx.moveTo(i, height/2);
+                    ctx.lineTo(i - (i-width/2)*2, height);
+                }
+                for(let i=height/2; i<height; i+=20) {
+                    ctx.moveTo(0, i);
+                    ctx.lineTo(width, i);
+                }
+                ctx.stroke();
+            }
+
+            // Ground (if exists)
+            if (theme.ground !== 'transparent') {
+                ctx.fillStyle = theme.ground;
+                ctx.beginPath();
+                ctx.moveTo(0, height * 0.7);
+                // More complex ground curve
+                ctx.bezierCurveTo(width * 0.3, height * 0.65, width * 0.7, height * 0.75, width, height * 0.7);
+                ctx.lineTo(width, height);
+                ctx.lineTo(0, height);
+                ctx.fill();
+            }
+        }
+
+        function animate() {
+            state.time += 0.05;
+            ctx.clearRect(0, 0, width, height);
+            
+            drawBackground();
+
+            // Ambient particles logic (spawn rate varies by theme)
+            let spawnRate = 0.05;
+            if (state.theme === 'cyberpunk') spawnRate = 0.2; // More glitches
+            if (state.theme === 'underwater') spawnRate = 0.1; // More bubbles
+
+            if (Math.random() < spawnRate) {
+                const theme = THEMES[state.theme];
+                // Spawn particles across full width/height
+                state.particles.push(new Particle(Math.random() * width, Math.random() * height, theme.particle));
+            }
+
+            // Sort objects by Y for depth (painters algorithm)
+            // For space/underwater, Z-sorting isn't strictly Y-based but it helps for occlusion if objects overlap
+            state.objects.sort((a, b) => a.y - b.y);
+
+            // Update & Draw Objects
+            state.objects.forEach(obj => {
+                obj.update();
+                obj.draw(ctx);
+            });
+
+            // Update & Draw Particles
+            for (let i = state.particles.length - 1; i >= 0; i--) {
+                const p = state.particles[i];
+                p.update();
+                p.draw(ctx);
+                if (p.life <= 0) state.particles.splice(i, 1);
+            }
+
+            // Draw floating text bubble
+            if (window.drawActiveBubble) drawActiveBubble(ctx);
+
+            animationId = requestAnimationFrame(animate);
+        }
+
+        // Init
+        uiBtn.addEventListener('click', generateScene);
+        
+        // Initial Random Generation
+        const starters = ['magical forest', 'cyberpunk city', 'deep space', 'underwater world'];
+        uiPrompt.value = starters[Math.floor(Math.random() * starters.length)];
+        generateScene();
+
+        animate(); // Start loop immediately
+
+    </script>
+</body>
+</html>
