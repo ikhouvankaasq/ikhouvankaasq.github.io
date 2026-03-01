@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎨 Dynamic Story-Driven Canvas Generator</title>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&display=swap');
+body { font-family: 'Inter', sans-serif; background: #0a0a1a; }
+.title-font { font-family: 'Cinzel', serif; }
+canvas { cursor: crosshair; image-rendering: auto; }
+.glow { text-shadow: 0 0 20px rgba(139,92,246,0.5); }
+.input-glow:focus { box-shadow: 0 0 25px rgba(139,92,246,0.4); }
+.btn-magic {
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  transition: all 0.3s ease;
+}
+.btn-magic:hover {
+  background: linear-gradient(135deg, #6d28d9, #1d4ed8);
+  box-shadow: 0 0 30px rgba(139,92,246,0.6);
+  transform: translateY(-2px);
+}
+.story-box {
+  background: rgba(15,15,35,0.9);
+  border: 1px solid rgba(139,92,246,0.3);
+  backdrop-filter: blur(10px);
+}
+.tooltip-bubble {
+  position: absolute;
+  background: rgba(0,0,0,0.85);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  pointer-events: none;
+  border: 1px solid rgba(139,92,246,0.5);
+  max-width: 200px;
+  z-index: 50;
+  transition: opacity 0.2s;
+}
+.tooltip-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid rgba(0,0,0,0.85);
+}
+#suggestions span {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+#suggestions span:hover {
+  background: rgba(139,92,246,0.3);
+  transform: scale(1.05);
+}
+.scene-counter {
+  background: linear-gradient(135deg, rgba(124,58,237,0.2), rgba(37,99,235,0.2));
+  border: 1px solid rgba(139,92,246,0.3);
+}
+</style>
+</head>
+<body class="min-h-screen text-white overflow-x-hidden">
+
+<!-- Header -->
+<div class="text-center pt-8 pb-4">
+  <h1 class="title-font text-4xl md:text-5xl font-bold glow bg-gradient-to-r from-purple-400 via-blue-400 to-pink-400 bg-clip-text text-transparent">
+    🎨 Story Canvas Generator
+  </h1>
+  <p class="text-gray-400 mt-2 text-sm md:text-base">Type een verhaal-prompt en zie het tot leven komen op canvas</p>
+</div>
+
+<!-- Controls -->
+<div class="max-w-4xl mx-auto px-4 mb-4">
+  <div class="flex flex-col sm:flex-row gap-3">
+    <input id="promptInput" type="text" placeholder="bijv. een magische boswandeling, onderwateravontuur, ruimtereis..."
+      class="input-glow flex-1 bg-gray-900/80 border border-purple-500/40 rounded-xl px-5 py-3.5 text-white placeholder-gray-500 outline-none text-lg"
+      onkeydown="if(event.key==='Enter') generateScene()">
+    <button onclick="generateScene()" class="btn-magic text-white font-semibold px-8 py-3.5 rounded-xl text-lg flex items-center justify-center gap-2">
+      <span>✨</span> Generate Scene
+    </button>
+  </div>
+  <div id="suggestions" class="flex flex-wrap gap-2 mt-3 justify-center">
+    <span onclick="useSuggestion(this)" class="bg-purple-900/40 border border-purple-700/40 rounded-full px-3 py-1 text-xs text-purple-300">🌲 magische boswandeling</span>
+    <span onclick="useSuggestion(this)" class="bg-blue-900/40 border border-blue-700/40 rounded-full px-3 py-1 text-xs text-blue-300">🌊 onderwateravontuur</span>
+    <span onclick="useSuggestion(this)" class="bg-indigo-900/40 border border-indigo-700/40 rounded-full px-3 py-1 text-xs text-xs text-indigo-300">🚀 ruimtereis naar Mars</span>
+    <span onclick="useSuggestion(this)" class="bg-amber-900/40 border border-amber-700/40 rounded-full px-3 py-1 text-xs text-amber-300">🏜️ woestijnavontuur</span>
+    <span onclick="useSuggestion(this)" class="bg-pink-900/40 border border-pink-700/40 rounded-full px-3 py-1 text-xs text-pink-300">🏰 kasteel in de wolken</span>
+    <span onclick="useSuggestion(this)" class="bg-green-900/40 border border-green-700/40 rounded-full px-3 py-1 text-xs text-green-300">🌸 betoverde tuin</span>
+    <span onclick="useSuggestion(this)" class="bg-cyan-900/40 border border-cyan-700/40 rounded-full px-3 py-1 text-xs text-cyan-300">❄️ ijspaleis in het noorden</span>
+    <span onclick="useSuggestion(this)" class="bg-red-900/40 border border-red-700/40 rounded-full px-3 py-1 text-xs text-red-300">🌋 vulkaaneiland</span>
+  </div>
+</div>
+
+<!-- Canvas Area -->
+<div class="max-w-5xl mx-auto px-4 relative">
+  <div class="relative rounded-2xl overflow-hidden border border-purple-500/20 shadow-2xl shadow-purple-900/20">
+    <canvas id="storyCanvas" width="1200" height="700"></canvas>
+    <div id="tooltip" class="tooltip-bubble" style="opacity:0;"></div>
+  </div>
+  <!-- Info bar -->
+  <div class="flex justify-between items-center mt-3 text-xs text-gray-500 px-1">
+    <div id="sceneInfo" class="scene-counter rounded-lg px-3 py-1.5">Scène: geen — Klik op objecten om te interacteren</div>
+    <div id="objectCount" class="scene-counter rounded-lg px-3 py-1.5">Objecten: 0 | Interactief: 0</div>
+  </div>
+</div>
+
+<!-- Story Text -->
+<div class="max-w-4xl mx-auto px-4 mt-4 mb-8">
+  <div id="storyText" class="story-box rounded-xl p-5 text-gray-300 text-sm leading-relaxed min-h-[60px] italic">
+    <span class="text-gray-600">Voer een prompt in en klik op "Generate Scene" om een verhaal te genereren...</span>
+  </div>
+</div>
+
+<!-- Keyboard hints -->
+<div class="max-w-4xl mx-auto px-4 mb-8 text-center">
+  <div class="text-xs text-gray-600 space-x-4">
+    <span>🖱️ Klik op objecten</span>
+    <span>⬆⬇⬅➡ Beweeg personage</span>
+    <span>Spatie = nieuwe deeltjes</span>
+    <span>R = regenereer</span>
+  </div>
+</div>
+
+<script>
+// ============================================
+// DYNAMIC STORY-DRIVEN CANVAS GENERATOR
+// Full canvas API, no external libraries
+// ============================================
+
+const canvas = document.getElementById('storyCanvas');
+const ctx = canvas.getContext('2d');
+const tooltipEl = document.getElementById('tooltip');
+
+// --- Responsive canvas ---
+function resizeCanvas() {
+  const container = canvas.parentElement;
+  const w = container.clientWidth;
+  const ratio = 1200 / 700;
+  canvas.style.width = w + 'px';
+  canvas.style.height = (w / ratio) + 'px';
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// ============================================
+// THEME / MOOD DETECTION ENGINE
+// ============================================
+const THEMES = {
+  forest: {
+    keywords: ['bos', 'forest', 'boom', 'woud', 'wandeling', 'hout', 'natuur', 'pad', 'trail'],
+    sky: ['#0b1a2e', '#1a3a1a', '#0d2818'],
+    ground: ['#1a3a1a', '#2d5a27', '#1e4d2b'],
+    accent: ['#4ade80', '#22c55e', '#86efac', '#a3e635'],
+    particles: ['#4ade80', '#fbbf24', '#86efac', '#ffffff'],
+    mood: 'mysterieus',
+    emoji: '🌲'
+  },
+  ocean: {
+    keywords: ['water', 'zee', 'ocean', 'onderwater', 'vis', 'koraal', 'oceaan', 'diepzee', 'aqua', 'marine'],
+    sky: ['#001830', '#002050', '#001428'],
+    ground: ['#001a33', '#002244', '#003355'],
+    accent: ['#22d3ee', '#06b6d4', '#67e8f9', '#0ea5e9'],
+    particles: ['#22d3ee', '#67e8f9', '#ffffff', '#a5f3fc'],
+    mood: 'sereen',
+    emoji: '🌊'
+  },
+  space: {
+    keywords: ['ruimte', 'space', 'ster', 'planeet', 'mars', 'maan', 'raket', 'galaxy', 'kosmos', 'melkweg'],
+    sky: ['#05050f', '#0a0a1a', '#070714'],
+    ground: ['#1a1a2e', '#16213e', '#0f0f23'],
+    accent: ['#a78bfa', '#818cf8', '#c084fc', '#e879f9'],
+    particles: ['#ffffff', '#fbbf24', '#a78bfa', '#f9a8d4'],
+    mood: 'kosmisch',
+    emoji: '🚀'
+  },
+  desert: {
+    keywords: ['woestijn', 'desert', 'zand', 'kameel', 'oase', 'piramide', 'sahara', 'duin'],
+    sky: ['#1a0a00', '#2d1600', '#3d1f00'],
+    ground: ['#d4a053', '#c49042', '#b8860b'],
+    accent: ['#fbbf24', '#f59e0b', '#d97706', '#fcd34d'],
+    particles: ['#fbbf24', '#fde68a', '#fed7aa', '#ffffff'],
+    mood: 'warm',
+    emoji: '🏜️'
+  },
+  castle: {
+    keywords: ['kasteel', 'castle', 'toren', 'ridder', 'draak', 'koning', 'prinses', 'wolk', 'hemel'],
+    sky: ['#1a1040', '#2a1a5e', '#1e1450'],
+    ground: ['#374151', '#4b5563', '#6b7280'],
+    accent: ['#fbbf24', '#f59e0b', '#fcd34d', '#fef3c7'],
+    particles: ['#ffffff', '#fbbf24', '#e2e8f0', '#c084fc'],
+    mood: 'episch',
+    emoji: '🏰'
+  },
+  garden: {
+    keywords: ['tuin', 'garden', 'bloem', 'vlinder', 'lente', 'betoverd', 'bloeien', 'roos', 'flora'],
+    sky: ['#0d1f12', '#1a3320', '#0f2917'],
+    ground: ['#2d5a27', '#3a7d32', '#4a9d3f'],
+    accent: ['#f472b6', '#ec4899', '#fb7185', '#f9a8d4'],
+    particles: ['#f472b6', '#fbbf24', '#a78bfa', '#4ade80'],
+    mood: 'betoverend',
+    emoji: '🌸'
+  },
+  ice: {
+    keywords: ['ijs', 'ice', 'sneeuw', 'winter', 'bevroren', 'noorden', 'pool', 'arctic', 'koud', 'frost', 'paleis'],
+    sky: ['#0a1628', '#0d1f3c', '#081430'],
+    ground: ['#e2e8f0', '#cbd5e1', '#b0c4de'],
+    accent: ['#67e8f9', '#22d3ee', '#a5f3fc', '#bae6fd'],
+    particles: ['#ffffff', '#e2e8f0', '#bae6fd', '#67e8f9'],
+    mood: 'ijzig',
+    emoji: '❄️'
+  },
+  volcano: {
+    keywords: ['vulkaan', 'volcano', 'lava', 'vuur', 'brand', 'vlam', 'magma', 'eiland', 'uitbarsting'],
+    sky: ['#1a0000', '#2d0a0a', '#3d0000'],
+    ground: ['#374151', '#292524', '#1c1917'],
+    accent: ['#ef4444', '#f97316', '#fbbf24', '#dc2626'],
+    particles: ['#ef4444', '#f97316', '#fbbf24', '#ff6b35'],
+    mood: 'intens',
+    emoji: '🌋'
+  }
+};
+
+// ============================================
+// STATE
+// ============================================
+let currentTheme = null;
+let sceneObjects = [];
+let particles = [];
+let animationId = null;
+let mouseX = 0, mouseY = 0;
+let hoveredObject = null;
+let selectedObject = null;
+let characterObj = null;
+let frameCount = 0;
+let storyLines = [];
+let currentStoryIndex = 0;
+let storyTimer = 0;
+let layers = { background: [], midground: [], foreground: [], ui: [] };
+let keysPressed = {};
+let scaleX = 1, scaleY = 1;
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+function rand(min, max) { return Math.random() * (max - min) + min; }
+function randInt(min, max) { return Math.floor(rand(min, max + 1)); }
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function dist(x1, y1, x2, y2) { return Math.sqrt((x2-x1)**2 + (y2-y1)**2); }
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return {r,g,b};
+}
+function rgbStr(r,g,b,a=1) { return `rgba(${r},${g},${b},${a})`; }
+
+// Get mouse position relative to canvas internal coords
+function getCanvasCoords(e) {
+  const rect = canvas.getBoundingClientRect();
+  const sx = canvas.width / rect.width;
+  const sy = canvas.height / rect.height;
+  return {
+    x: (e.clientX - rect.left) * sx,
+    y: (e.clientY - rect.top) * sy
+  };
+}
+
+// ============================================
+// THEME DETECTION
+// ============================================
+function detectTheme(prompt) {
+  const lower = prompt.toLowerCase();
+  let bestTheme = null;
+  let bestScore = 0;
+  for (const [name, theme] of Object.entries(THEMES)) {
+    let score = 0;
+    for (const kw of theme.keywords) {
+      if (lower.includes(kw)) score += kw.length;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestTheme = name;
+    }
+  }
+  if (!bestTheme) {
+    const keys = Object.keys(THEMES);
+    bestTheme = keys[Math.floor(Math.random() * keys.length)];
+  }
+  return bestTheme;
+}
+
+// ============================================
+// SCENE OBJECT CLASS
+// ============================================
+class SceneObject {
+  constructor(opts) {
+    this.type = opts.type || 'generic';
+    this.x = opts.x || 0;
+    this.y = opts.y || 0;
+    this.w = opts.w || 40;
+    this.h = opts.h || 40;
+    this.color = opts.color || '#fff';
+    this.secondaryColor = opts.secondaryColor || '#ccc';
+    this.interactive = opts.interactive !== undefined ? opts.interactive : false;
+    this.label = opts.label || '';
+    this.description = opts.description || '';
+    this.layer = opts.layer || 'midground';
+    this.drawFn = opts.drawFn || null;
+    this.vx = opts.vx || 0;
+    this.vy = opts.vy || 0;
+    this.angle = opts.angle || 0;
+    this.scale = opts.scale || 1;
+    this.bobOffset = Math.random() * Math.PI * 2;
+    this.clicked = false;
+    this.clickAnim = 0;
+    this.hovered = false;
+    this.controllable = opts.controllable || false;
+    this.opacity = opts.opacity || 1;
+  }
+  
+  contains(px, py) {
+    return px >= this.x - this.w/2 && px <= this.x + this.w/2 &&
+           py >= this.y - this.h/2 && py <= this.y + this.h/2;
+  }
+  
+  update() {
+    if (this.clickAnim > 0) this.clickAnim -= 0.05;
+    if (this.controllable) {
+      const speed = 3;
+      if (keysPressed['ArrowLeft'] || keysPressed['a']) this.x -= speed;
+      if (keysPressed['ArrowRight'] || keysPressed['d']) this.x += speed;
+      if (keysPressed['ArrowUp'] || keysPressed['w']) this.y -= speed;
+      if (keysPressed['ArrowDown'] || keysPressed['s']) this.y += speed;
+      this.x = Math.max(this.w/2, Math.min(canvas.width - this.w/2, this.x));
+      this.y = Math.max(this.h/2, Math.min(canvas.height - this.h/2, this.y));
+    }
+    this.x += this.vx;
+    this.y += this.vy;
+  }
+  
+  draw(ctx) {
+    ctx.save();
+    ctx.globalAlpha = this.opacity;
+    const bob = Math.sin(frameCount * 0.03 + this.bobOffset) * 3;
+    const sc = this.clickAnim > 0 ? 1 + this.clickAnim * 0.3 : 1;
+    ctx.translate(this.x, this.y + (this.interactive ? bob : 0));
+    ctx.scale(sc * this.scale, sc * this.scale);
+    if (this.drawFn) {
+      this.drawFn(ctx, this);
+    }
+    // Hover glow
+    if (this.hovered && this.interactive) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, Math.max(this.w, this.h) * 0.7, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+// ============================================
+// DRAWING PRIMITIVES FOR OBJECTS
+// ============================================
+const Drawings = {
+  tree(ctx, obj) {
+    // Trunk
+    ctx.fillStyle = '#5c3a1e';
+    ctx.fillRect(-8, -10, 16, obj.h * 0.5);
+    // Leaves
+    ctx.fillStyle = obj.color;
+    ctx.beginPath();
+    ctx.moveTo(0, -obj.h * 0.8);
+    ctx.lineTo(-obj.w * 0.5, -10);
+    ctx.lineTo(obj.w * 0.5, -10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = obj.secondaryColor;
+    ctx.beginPath();
+    ctx.moveTo(0, -obj.h * 0.65);
+    ctx.lineTo(-obj.w * 0.4, -5);
+    ctx.lineTo(obj.w * 0.4, -5);
+    ctx.closePath();
+    ctx.fill();
+    // Glow for magical trees
+    if (obj.label.includes('Magisch') || obj.label.includes('Betoverd')) {
+      ctx.shadowColor = obj.color;
+      ctx.shadowBlur = 20;
+      ctx.fillStyle = 'rgba(255,255,200,0.4)';
+      for (let i = 0; i < 5; i++) {
+        const gx = rand(-obj.w*0.3, obj.w*0.3);
+        const gy = rand(-obj.h*0.7, -15);
+        ctx.beginPath();
+        ctx.arc(gx, gy, 3, 0, Math.PI*2);
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+    }
+  },
+  
+  flower(ctx, obj) {
+    // Stem
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, 10);
+    ctx.lineTo(0, -5);
+    ctx.stroke();
+    // Petals
+    const petals = 6;
+    for (let i = 0; i < petals; i++) {
+      const a = (i / petals) * Math.PI * 2 + frameCount * 0.01;
+      ctx.fillStyle = obj.color;
+      ctx.beginPath();
+      ctx.ellipse(Math.cos(a)*10, Math.sin(a)*10 - 10, 7, 4, a, 0, Math.PI*2);
+      ctx.fill();
+    }
+    // Center
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.arc(0, -10, 5, 0, Math.PI*2);
+    ctx.fill();
+  },
+  
+  character(ctx, obj) {
+    // Body
+    ctx.fillStyle = obj.color;
+    ctx.beginPath();
+    ctx.arc(0, -10, 15, 0, Math.PI * 2);
+    ctx.fill();
+    // Face
+    ctx.fillStyle = '#fde68a';
+    ctx.beginPath();
+    ctx.arc(0, -25, 12, 0, Math.PI * 2);
+    ctx.fill();
+    // Eyes
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath();
+    ctx.arc(-4, -27, 2.5, 0, Math.PI*2);
+    ctx.arc(4, -27, 2.5, 0, Math.PI*2);
+    ctx.fill();
+    // Smile
+    ctx.strokeStyle = '#92400e';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, -23, 5, 0.1*Math.PI, 0.9*Math.PI);
+    ctx.stroke();
+    // Hat/hair
+    ctx.fillStyle = obj.secondaryColor;
+    ctx.beginPath();
+    ctx.moveTo(-14, -32);
+    ctx.lineTo(0, -48);
+    ctx.lineTo(14, -32);
+    ctx.closePath();
+    ctx.fill();
+    // Legs animation
+    const legAnim = Math.sin(frameCount * 0.1) * 5;
+    ctx.strokeStyle = obj.color;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-5, 5);
+    ctx.lineTo(-8, 20 + legAnim);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(5, 5);
+    ctx.lineTo(8, 20 - legAnim);
+    ctx.stroke();
+  },
+  
+  star(ctx, obj) {
+    const spikes = 5;
+    const outerR = obj.w * 0.4;
+    const innerR = obj.w * 0.2;
+    ctx.fillStyle = obj.color;
+    ctx.shadowColor = obj.color;
+    ctx.shadowBlur = 15;
+    ctx.beginPath();
+    for (let i = 0; i < spikes * 2; i++) {
+      const r = i % 2 === 0 ? outerR : innerR;
+      const a = (i / (spikes * 2)) * Math.PI * 2 - Math.PI/2 + frameCount * 0.02;
+      ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  },
+  
+  fish(ctx, obj) {
+    ctx.fillStyle = obj.color;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, obj.w*0.4, obj.h*0.25, 0, 0, Math.PI*2);
+    ctx.fill();
+    // Tail
+    ctx.beginPath();
+    ctx.moveTo(obj.w*0.3, 0);
+    ctx.lineTo(obj.w*0.55, -obj.h*0.2);
+    ctx.lineTo(obj.w*0.55, obj.h*0.2);
+    ctx.closePath();
+    ctx.fill();
+    // Eye
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(-obj.w*0.15, -3, 4, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(-obj.w*0.14, -3, 2, 0, Math.PI*2);
+    ctx.fill();
+  },
+  
+  coral(ctx, obj) {
+    const branches = 5;
+    ctx.strokeStyle = obj.color;
+    ctx.lineCap = 'round';
+    for (let i = 0; i < branches; i++) {
+      const angle = -Math.PI/2 + (i - branches/2) * 0.3;
+      const len = obj.h * (0.4 + Math.random()*0.3);
+      ctx.lineWidth = 4 - i*0.5;
+      ctx.beginPath();
+      ctx.moveTo(0, 10);
+      const sway = Math.sin(frameCount*0.02 + i)*3;
+      ctx.quadraticCurveTo(
+        Math.cos(angle)*len*0.5 + sway, 10 + Math.sin(angle)*len*0.5,
+        Math.cos(angle)*len + sway, 10 + Math.sin(angle)*len
+      );
+      ctx.stroke();
+    }
+  },
+  
+  planet(ctx, obj) {
+    // Planet body
+    const grad = ctx.createRadialGradient(-5, -5, 2, 0, 0, obj.w*0.4);
+    grad.addColorStop(0, obj.color);
+    grad.addColorStop(1, obj.secondaryColor);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(0, 0, obj.w*0.4, 0, Math.PI*2);
+    ctx.fill();
+    // Ring
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, obj.w*0.6, obj.w*0.15, 0.3, 0, Math.PI*2);
+    ctx.stroke();
+  },
+  
+  rocket(ctx, obj) {
+    // Body
+    ctx.fillStyle = obj.color;
+    ctx.beginPath();
+    ctx.moveTo(0, -obj.h*0.45);
+    ctx.quadraticCurveTo(obj.w*0.2, -obj.h*0.2, obj.w*0.15, obj.h*0.2);
+    ctx.lineTo(-obj.w*0.15, obj.h*0.2);
+    ctx.quadraticCurveTo(-obj.w*0.2, -obj.h*0.2, 0, -obj.h*0.45);
+    ctx.fill();
+    // Window
+    ctx.fillStyle = '#67e8f9';
+    ctx.beginPath();
+    ctx.arc(0, -obj.h*0.1, 6, 0, Math.PI*2);
+    ctx.fill();
+    // Fins
+    ctx.fillStyle = obj.secondaryColor;
+    ctx.beginPath();
+    ctx.moveTo(-obj.w*0.15, obj.h*0.1);
+    ctx.lineTo(-obj.w*0.3, obj.h*0.3);
+    ctx.lineTo(-obj.w*0.1, obj.h*0.2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(obj.w*0.15, obj.h*0.1);
+    ctx.lineTo(obj.w*0.3, obj.h*0.3);
+    ctx.lineTo(obj.w*0.1, obj.h*0.2);
+    ctx.closePath();
+    ctx.fill();
+    // Flame
+    const flicker = rand(0.8, 1.2);
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.moveTo(-8, obj.h*0.2);
+    ctx.lineTo(0, obj.h*0.2 + 20*flicker);
+    ctx.lineTo(8, obj.h*0.2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.moveTo(-5, obj.h*0.2);
+    ctx.lineTo(0, obj.h*0.2 + 12*flicker);
+    ctx.lineTo(5, obj.h*0.2);
+    ctx.closePath();
+    ctx.fill();
+  },
+  
+  castle(ctx, obj) {
+    const w = obj.w, h = obj.h;
+    // Main body
+    ctx.fillStyle = obj.color;
+    ctx.fillRect(-w*0.35, -h*0.2, w*0.7, h*0.5);
+    // Towers
+    ctx.fillRect(-w*0.45, -h*0.5, w*0.2, h*0.8);
+    ctx.fillRect(w*0.25, -h*0.5, w*0.2, h*0.8);
+    // Tower tops
+    ctx.fillStyle = obj.secondaryColor;
+    ctx.beginPath();
+    ctx.moveTo(-w*0.5, -h*0.5);
+    ctx.lineTo(-w*0.35, -h*0.7);
+    ctx.lineTo(-w*0.2, -h*0.5);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(w*0.2, -h*0.5);
+    ctx.lineTo(w*0.35, -h*0.7);
+    ctx.lineTo(w*0.5, -h*0.5);
+    ctx.fill();
+    // Door
+    ctx.fillStyle = '#5c3a1e';
+    ctx.beginPath();
+    ctx.arc(0, h*0.15, w*0.08, Math.PI, 0);
+    ctx.fillRect(-w*0.08, h*0.15, w*0.16, h*0.15);
+    ctx.fill();
+    // Windows
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillRect(-w*0.15, -h*0.1, w*0.08, w*0.08);
+    ctx.fillRect(w*0.07, -h*0.1, w*0.08, w*0.08);
+    // Flags
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.moveTo(-w*0.35, -h*0.7);
+    ctx.lineTo(-w*0.35 + 15, -h*0.7 + 5 + Math.sin(frameCount*0.05)*3);
+    ctx.lineTo(-w*0.35, -h*0.7 + 10);
+    ctx.fill();
+  },
+  
+  cloud(ctx, obj) {
+    ctx.fillStyle = obj.color;
+    ctx.globalAlpha = obj.opacity || 0.6;
+    ctx.beginPath();
+    ctx.arc(0, 0, obj.w*0.2, 0, Math.PI*2);
+    ctx.arc(-obj.w*0.2, 5, obj.w*0.15, 0, Math.PI*2);
+    ctx.arc(obj.w*0.2, 5, obj.w*0.18, 0, Math.PI*2);
+    ctx.arc(obj.w*0.1, -5, obj.w*0.14, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  },
+  
+  mountain(ctx, obj) {
+    ctx.fillStyle = obj.color;
+    ctx.beginPath();
+    ctx.moveTo(-obj.w*0.5, obj.h*0.3);
+    ctx.lineTo(0, -obj.h*0.5);
+    ctx.lineTo(obj.w*0.5, obj.h*0.3);
+    ctx.closePath();
+    ctx.fill();
+    // Snow cap
+    ctx.fillStyle = '#e2e8f0';
+    ctx.beginPath();
+    ctx.moveTo(-obj.w*0.12, -obj.h*0.25);
+    ctx.lineTo(0, -obj.h*0.5);
+    ctx.lineTo(obj.w*0.12, -obj.h*0.25);
+    ctx.closePath();
+    ctx.fill();
+  },
+  
+  butterfly(ctx, obj) {
+    const wingFlap = Math.sin(frameCount * 0.15) * 0.5;
+    ctx.fillStyle = obj.color;
+    // Left wing
+    ctx.save();
+    ctx.scale(1, wingFlap + 0.7);
+    ctx.beginPath();
+    ctx.ellipse(-8, -3, 10, 7, -0.3, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+    // Right wing
+    ctx.save();
+    ctx.scale(1, wingFlap + 0.7);
+    ctx.fillStyle = obj.secondaryColor || obj.color;
+    ctx.beginPath();
+    ctx.ellipse(8, -3, 10, 7, 0.3, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+    // Body
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(-1.5, -8, 3, 12);
+  },
+  
+  cactus(ctx, obj) {
+    ctx.fillStyle = obj.color;
+    // Main body
+    ctx.beginPath();
+    ctx.roundRect(-10, -obj.h*0.4, 20, obj.h*0.7, 8);
+    ctx.fill();
+    // Arms
+    ctx.beginPath();
+    ctx.roundRect(-25, -obj.h*0.2, 15, 12, 6);
+    ctx.fill();
+    ctx.fillRect(-12, -obj.h*0.2, 5, 15);
+    ctx.beginPath();
+    ctx.roundRect(10, -obj.h*0.1, 15, 12, 6);
+    ctx.fill();
+    ctx.fillRect(10, -obj.h*0.1, 5, 12);
+  },
+  
+  snowflake(ctx, obj) {
+    ctx.strokeStyle = obj.color;
+    ctx.lineWidth = 2;
+    ctx.shadowColor = obj.color;
+    ctx.shadowBlur = 8;
+    const r = obj.w * 0.3;
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 + frameCount * 0.01;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r);
+      ctx.stroke();
+      // branches
+      const bx = Math.cos(a)*r*0.6, by = Math.sin(a)*r*0.6;
+      ctx.beginPath();
+      ctx.moveTo(bx, by);
+      ctx.lineTo(bx + Math.cos(a+0.5)*r*0.3, by + Math.sin(a+0.5)*r*0.3);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(bx, by);
+      ctx.lineTo(bx + Math.cos(a-0.5)*r*0.3, by + Math.sin(a-0.5)*r*0.3);
+      ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+  },
+
+  volcano(ctx, obj) {
+    // Mountain
+    ctx.fillStyle = obj.color;
+    ctx.beginPath();
+    ctx.moveTo(-obj.w*0.5, obj.h*0.3);
+    ctx.lineTo(-obj.w*0.15, -obj.h*0.4);
+    ctx.lineTo(obj.w*0.15, -obj.h*0.4);
+    ctx.lineTo(obj.w*0.5, obj.h*0.3);
+    ctx.closePath();
+    ctx.fill();
+    // Crater
+    ctx.fillStyle = '#1c1917';
+    ctx.beginPath();
+    ctx.ellipse(0, -obj.h*0.38, obj.w*0.15, 8, 0, 0, Math.PI*2);
+    ctx.fill();
+    // Lava glow
+    ctx.fillStyle = `rgba(239,68,68,${0.5 + Math.sin(frameCount*0.05)*0.3})`;
+    ctx.beginPath();
+    ctx.ellipse(0, -obj.h*0.38, obj.w*0.1, 5, 0, 0, Math.PI*2);
+    ctx.fill();
+  },
+
+  mushroom(ctx, obj) {
+    // Stem
+    ctx.fillStyle = '#fde68a';
+    ctx.fillRect(-6, -5, 12, obj.h*0.4);
+    // Cap
+    ctx.fillStyle = obj.color;
+    ctx.beginPath();
+    ctx.arc(0, -8, obj.w*0.35, Math.PI, 0);
+    ctx.closePath();
+    ctx.fill();
+    // Spots
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(-5, -15, 3, 0, Math.PI*2);
+    ctx.arc(6, -12, 2.5, 0, Math.PI*2);
+    ctx.arc(0, -18, 2, 0, Math.PI*2);
+    ctx.fill();
+    // Glow
+    ctx.shadowColor = obj.color;
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = `rgba(255,255,255,${0.1 + Math.sin(frameCount*0.04)*0.1})`;
+    ctx.beginPath();
+    ctx.arc(0, -10, obj.w*0.4, 0, Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  },
+  
+  bubble(ctx, obj) {
+    ctx.strokeStyle = obj.color;
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    ctx.arc(0, 0, obj.w*0.3, 0, Math.PI*2);
+    ctx.stroke();
+    // Highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.beginPath();
+    ctx.arc(-obj.w*0.08, -obj.w*0.08, obj.w*0.08, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+};
+
+// ============================================
+// PARTICLE SYSTEM
+// ============================================
+class Particle {
+  constructor(x, y, color, type) {
+    this.x = x;
+    this.y = y;
+    this.color = color;
+    this.type = type;
+    this.size = rand(2, 6);
+    this.life = 1;
+    this.decay = rand(0.002, 0.01);
+    this.vx = rand(-1, 1);
+    this.vy = rand(-2, 0.5);
+    this.rotation = rand(0, Math.PI*2);
+    this.rotSpeed = rand(-0.05, 0.05);
+    
+    if (type === 'leaf') {
+      this.size = rand(4, 8);
+      this.vy = rand(0.3, 1.5);
+      this.vx = rand(-0.5, 0.5);
+      this.decay = rand(0.001, 0.004);
+    } else if (type === 'bubble') {
+      this.vy = rand(-1.5, -0.3);
+      this.decay = rand(0.002, 0.006);
+    } else if (type === 'star') {
+      this.vy = rand(-0.5, 0.5);
+      this.vx = rand(-0.3, 0.3);
+      this.decay = rand(0.001, 0.005);
+      this.twinkle = rand(0, Math.PI*2);
+    } else if (type === 'snow') {
+      this.vy = rand(0.5, 2);
+      this.vx = rand(-0.3, 0.3);
+      this.decay = rand(0.001, 0.003);
+      this.size = rand(2, 5);
+    } else if (type === 'ember') {
+      this.vy = rand(-2, -0.5);
+      this.vx = rand(-1, 1);
+      this.decay = rand(0.005, 0.015);
+      this.size = rand(2, 5);
+    } else if (type === 'sparkle') {
+      this.decay = rand(0.01, 0.03);
+      this.size = rand(2, 5);
+    } else if (type === 'petal') {
+      this.size = rand(3, 7);
+      this.vy = rand(0.2, 1.2);
+      this.vx = rand(-0.8, 0.8);
+      this.decay = rand(0.001, 0.004);
+    } else if (type === 'sand') {
+      this.vy = rand(-0.5, 0.5);
+      this.vx = rand(0.5, 2);
+      this.decay = rand(0.003, 0.008);
+      this.size = rand(1, 3);
+    }
+  }
+  
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.life -= this.decay;
+    this.rotation += this.rotSpeed;
+    if (this.type === 'leaf' || this.type === 'petal') {
+      this.vx += Math.sin(frameCount * 0.02 + this.rotation) * 0.02;
+    }
+    if (this.type === 'snow') {
+      this.vx = Math.sin(frameCount * 0.01 + this.rotation) * 0.5;
+    }
+    if (this.type === 'ember') {
+      this.vx += rand(-0.1, 0.1);
+    }
+  }
+  
+  draw(ctx) {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, this.life);
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rotation);
+    
+    if (this.type === 'leaf') {
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, this.size, this.size*0.5, 0, 0, Math.PI*2);
+      ctx.fill();
+    } else if (this.type === 'bubble') {
+      ctx.strokeStyle = this.color;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.size, 0, Math.PI*2);
+      ctx.stroke();
+    } else if (this.type === 'star') {
+      const twinkleSize = this.size * (0.5 + Math.sin(frameCount*0.1 + this.twinkle)*0.5);
+      ctx.fillStyle = this.color;
+      ctx.shadowColor = this.color;
+      ctx.shadowBlur = 5;
+      ctx.beginPath();
+      ctx.arc(0, 0, twinkleSize, 0, Math.PI*2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    } else if (this.type === 'snow') {
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.size, 0, Math.PI*2);
+      ctx.fill();
+    } else if (this.type === 'ember') {
+      ctx.fillStyle = this.color;
+      ctx.shadowColor = this.color;
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.size * this.life, 0, Math.PI*2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    } else if (this.type === 'sparkle') {
+      ctx.fillStyle = this.color;
+      ctx.shadowColor = this.color;
+      ctx.shadowBlur = 10;
+      const s = this.size * this.life;
+      ctx.fillRect(-s/2, -0.5, s, 1);
+      ctx.fillRect(-0.5, -s/2, 1, s);
+      ctx.shadowBlur = 0;
+    } else if (this.type === 'petal') {
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, this.size, this.size*0.4, 0, 0, Math.PI*2);
+      ctx.fill();
+    } else if (this.type === 'sand') {
+      ctx.fillStyle = this.color;
+      ctx.fillRect(0, 0, this.size, this.size);
+    } else {
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.size, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+function spawnParticles(count, type, theme) {
+  for (let i = 0; i < count; i++) {
+    const x = rand(0, canvas.width);
+    const y = type === 'bubble' ? rand(canvas.height*0.5, canvas.height) :
+              type === 'ember' ? rand(canvas.width*0.3, canvas.width*0.7) :
+              rand(-50, 0);
+    const color = pick(theme.particles);
+    particles.push(new Particle(x, y, color, type));
+  }
+}
+
+function spawnClickParticles(x, y, theme) {
+  for (let i = 0; i < 15; i++) {
+    const p = new Particle(x, y, pick(theme.particles), 'sparkle');
+    p.vx = rand(-3, 3);
+    p.vy = rand(-3, 3);
+    particles.push(p);
+  }
+}
+
+// ============================================
+// SCENE GENERATORS
+// ============================================
+const SceneGenerators = {
+  forest(theme) {
+    const objs = [];
+    // Mountains in background
+    for (let i = 0; i < 3; i++) {
+      objs.push(new SceneObject({
+        type: 'mountain', x: 150 + i*400, y: 350,
+        w: rand(250,400), h: rand(200,300),
+        color: '#1a3a1a', layer: 'background',
+        drawFn: Drawings.mountain, label: 'Berg', description: 'Een mystieke berg in de verte'
+      }));
+    }
+    // Trees
+    for (let i = 0; i < 8; i++) {
+      const x = rand(50, 1150);
+      const y = rand(400, 600);
+      const size = rand(0.6, 1.4);
+      objs.push(new SceneObject({
+        type: 'tree', x, y, w: 60*size, h: 80*size,
+        color: pick(theme.accent), secondaryColor: pick(theme.accent),
+        interactive: i < 3, layer: 'midground',
+        drawFn: Drawings.tree, scale: size,
+        label: i < 3 ? 'Magische Boom' : 'Boom',
+        description: i < 3 ? 'Klik om de boom te laten oplichten!' : 'Een oude boom in het bos'
+      }));
+    }
+    // Mushrooms
+    for (let i = 0; i < 4; i++) {
+      objs.push(new SceneObject({
+        type: 'mushroom', x: rand(80, 1120), y: rand(520, 630),
+        w: rand(25,40), h: rand(30,45),
+        color: pick(['#ef4444','#a78bfa','#f472b6','#fbbf24']),
+        interactive: true, layer: 'foreground',
+        drawFn: Drawings.mushroom, scale: rand(0.6, 1.1),
+        label: 'Paddenstoel', description: 'Een gloeiende paddenstoel. Klik om magie vrij te laten!'
+      }));
+    }
+    // Character
+    const char = new SceneObject({
+      type: 'character', x: 600, y: 500,
+      w: 40, h: 50, color: '#7c3aed', secondaryColor: '#4ade80',
+      interactive: true, controllable: true, layer: 'foreground',
+      drawFn: Drawings.character,
+      label: 'Wandelaar', description: 'Gebruik pijltjestoetsen om te bewegen!'
+    });
+    objs.push(char);
+    // Butterflies
+    for (let i = 0; i < 3; i++) {
+      const bfly = new SceneObject({
+        type: 'butterfly', x: rand(100, 1100), y: rand(200, 450),
+        w: 30, h: 20, color: pick(theme.accent), secondaryColor: pick(theme.particles),
+        interactive: true, layer: 'foreground',
+        drawFn: Drawings.butterfly,
+        label: 'Vlinder', description: 'Een betoverde vlinder danst in de lucht'
+      });
+      bfly.vx = rand(-0.5, 0.5);
+      bfly.vy = rand(-0.3, 0.3);
+      bfly._baseX = bfly.x;
+      bfly._baseY = bfly.y;
+      objs.push(bfly);
+    }
+    return { objects: objs, particleType: 'leaf', character: char };
+  },
+  
+  ocean(theme) {
+    const objs = [];
+    // Corals
+    for (let i = 0; i < 6; i++) {
+      objs.push(new SceneObject({
+        type: 'coral', x: rand(50, 1150), y: rand(550, 650),
+        w: rand(40,70), h: rand(50,80),
+        color: pick(['#f472b6','#fb7185','#a78bfa','#22d3ee','#4ade80']),
+        interactive: i < 3, layer: 'midground',
+        drawFn: Drawings.coral, label: 'Koraal', description: 'Kleurrijk koraal wiegt mee met de stroming'
+      }));
+    }
+    // Fish
+    for (let i = 0; i < 6; i++) {
+      const fish = new SceneObject({
+        type: 'fish', x: rand(50, 1150), y: rand(200, 550),
+        w: rand(40, 70), h: rand(25, 40),
+        color: pick(theme.accent), interactive: true, layer: 'foreground',
+        drawFn: Drawings.fish,
+        label: 'Vis', description: 'Een tropische vis zwemt voorbij. Klik om van richting te veranderen!'
+      });
+      fish.vx = rand(-1, 1) || 0.5;
+      objs.push(fish);
+    }
+    // Bubbles (decorative objects)
+    for (let i = 0; i < 5; i++) {
+      objs.push(new SceneObject({
+        type: 'bubble_obj', x: rand(100, 1100), y: rand(300, 600),
+        w: rand(15,30), h: rand(15,30),
+        color: pick(theme.particles), opacity: 0.5,
+        layer: 'foreground', drawFn: Drawings.bubble,
+        label: 'Bel', description: 'Een luchtbel stijgt langzaam op'
+      }));
+    }
+    // Character (diver)
+    const char = new SceneObject({
+      type: 'character', x: 600, y: 400,
+      w: 40, h: 50, color: '#0ea5e9', secondaryColor: '#fbbf24',
+      interactive: true, controllable: true, layer: 'foreground',
+      drawFn: Drawings.character,
+      label: 'Duiker', description: 'Gebruik pijltjestoetsen om te zwemmen!'
+    });
+    objs.push(char);
+    return { objects: objs, particleType: 'bubble', character: char };
+  },
+  
+  space(theme) {
+    const objs = [];
+    // Planets
+    for (let i = 0; i < 3; i++) {
+      objs.push(new SceneObject({
+        type: 'planet', x: rand(100, 1100), y: rand(100, 500),
+        w: rand(60, 120), h: rand(60, 120),
+        color: pick(['#a78bfa','#f472b6','#fb923c','#22d3ee','#ef4444']),
+        secondaryColor: pick(['#4c1d95','#831843','#7c2d12','#164e63','#7f1d1d']),
+        interactive: true, layer: 'midground',
+        drawFn: Drawings.planet, label: ['Nebula-X', 'Zyon Prime', 'Galaxia'][i],
+        description: 'Een mysterieuze planeet. Klik om te verkennen!'
+      }));
+    }
+    // Stars (objects)
+    for (let i = 0; i < 5; i++) {
+      objs.push(new SceneObject({
+        type: 'star_obj', x: rand(50, 1150), y: rand(50, 600),
+        w: rand(20, 40), h: rand(20, 40),
+        color: pick(['#fbbf24','#ffffff','#67e8f9']),
+        interactive: i < 2, layer: 'background',
+        drawFn: Drawings.star, label: 'Ster', description: 'Een twinkelende ster in de verte'
+      }));
+    }
+    // Rocket (character)
+    const char = new SceneObject({
+      type: 'rocket', x: 600, y: 500,
+      w: 50, h: 70, color: '#e2e8f0', secondaryColor: '#ef4444',
+      interactive: true, controllable: true, layer: 'foreground',
+      drawFn: Drawings.rocket,
+      label: 'Raket', description: 'Gebruik pijltjestoetsen om door de ruimte te vliegen!'
+    });
+    objs.push(char);
+    return { objects: objs, particleType: 'star', character: char };
+  },
+  
+  desert(theme) {
+    const objs = [];
+    // Dunes (as mountains)
+    for (let i = 0; i < 4; i++) {
+      objs.push(new SceneObject({
+        type: 'mountain', x: 100 + i*300, y: 450,
+        w: rand(300, 450), h: rand(100, 200),
+        color: pick(['#d4a053','#c49042','#b8860b']),
+        layer: 'background', drawFn: Drawings.mountain,
+        label: 'Zandduin', description: 'Een eindeloze zandduin'
+      }));
+    }
+    // Cacti
+    for (let i = 0; i < 5; i++) {
+      objs.push(new SceneObject({
+        type: 'cactus', x: rand(80, 1120), y: rand(450, 600),
+        w: rand(35, 50), h: rand(50, 70),
+        color: pick(['#22c55e','#16a34a','#4ade80']),
+        interactive: i < 3, layer: 'midground',
+        drawFn: Drawings.cactus, label: 'Cactus', description: 'Een stoere woestijncactus. Pas op voor de stekels!'
+      }));
+    }
+    // Star (sun)
+    objs.push(new SceneObject({
+      type: 'star_obj', x: 1000, y: 100,
+      w: 80, h: 80, color: '#fbbf24',
+      interactive: true, layer: 'background',
+      drawFn: Drawings.star, label: 'Zon', description: 'De verzengende woestijnzon'
+    }));
+    // Character
+    const char = new SceneObject({
+      type: 'character', x: 600, y: 520,
+      w: 40, h: 50, color: '#f59e0b', secondaryColor: '#fbbf24',
+      interactive: true, controllable: true, layer: 'foreground',
+      drawFn: Drawings.character,
+      label: 'Ontdekkingsreiziger', description: 'Gebruik pijltjestoetsen om de woestijn te verkennen!'
+    });
+    objs.push(char);
+    return { objects: objs, particleType: 'sand', character: char };
+  },
+  
+  castle(theme) {
+    const objs = [];
+    // Clouds
+    for (let i = 0; i < 5; i++) {
+      const cloud = new SceneObject({
+        type: 'cloud', x: rand(-100, 1300), y: rand(50, 250),
+        w: rand(80, 150), h: 40, color: '#e2e8f0', opacity: rand(0.3,0.6),
+        layer: 'background', drawFn: Drawings.cloud,
+        label: 'Wolk', description: 'Een zachte wolk drijft voorbij'
+      });
+      cloud.vx = rand(0.1, 0.4);
+      objs.push(cloud);
+    }
+    // Castle
+    objs.push(new SceneObject({
+      type: 'castle', x: 600, y: 380,
+      w: 200, h: 180, color: '#9ca3af', secondaryColor: '#ef4444',
+      interactive: true, layer: 'midground',
+      drawFn: Drawings.castle, label: 'Kasteel', description: 'Een majestueus kasteel in de wolken. Klik voor een verrassing!'
+    }));
+    // Stars
+    for (let i = 0; i < 6; i++) {
+      objs.push(new SceneObject({
+        type: 'star_obj', x: rand(50, 1150), y: rand(50, 300),
+        w: rand(15, 30), h: rand(15, 30),
+        color: pick(theme.particles), interactive: i < 2,
+        layer: 'background', drawFn: Drawings.star,
+        label: 'Ster', description: 'Een wensster. Klik om een wens te doen!'
+      }));
+    }
+    // Smaller towers
+    objs.push(new SceneObject({
+      type: 'castle', x: 250, y: 450, w: 100, h: 100,
+      color: '#6b7280', secondaryColor: '#3b82f6',
+      interactive: true, layer: 'midground',
+      drawFn: Drawings.castle, label: 'Wachttoren', description: 'Een wachttoren bewaakt het koninkrijk'
+    }));
+    objs.push(new SceneObject({
+      type: 'castle', x: 950, y: 460, w: 90, h: 90,
+      color: '#6b7280', secondaryColor: '#22c55e',
+      interactive: true, layer: 'midground',
+      drawFn: Drawings.castle, label: 'Wachttoren', description: 'Een wachttoren aan de oostzijde'
+    }));
+    // Character
+    const char = new SceneObject({
+      type: 'character', x: 600, y: 550,
+      w: 40, h: 50, color: '#7c3aed', secondaryColor: '#fbbf24',
+      interactive: true, controllable: true, layer: 'foreground',
+      drawFn: Drawings.character,
+      label: 'Ridder', description: 'Een dappere ridder. Gebruik pijltjestoetsen!'
+    });
+    objs.push(char);
+    return { objects: objs, particleType: 'sparkle', character: char };
+  },
+  
+  garden(theme) {
+    const objs = [];
+    // Trees in back
+    for (let i = 0; i < 4; i++) {
+      objs.push(new SceneObject({
+        type: 'tree', x: rand(50, 1150), y: rand(350, 420),
+        w: rand(60, 90), h: rand(80, 120),
+        color: pick(theme.accent), secondaryColor: pick(theme.accent),
+        layer: 'background', drawFn: Drawings.tree, scale: rand(0.8,1.3),
+        label: 'Betoverde Boom', description: 'Een boom vol bloesem'
+      }));
+    }
+    // Flowers
+    for (let i = 0; i < 10; i++) {
+      objs.push(new SceneObject({
+        type: 'flower', x: rand(50, 1150), y: rand(500, 650),
+        w: 25, h: 30,
+        color: pick(['#f472b6','#ec4899','#a78bfa','#fbbf24','#fb7185','#c084fc']),
+        interactive: i < 4, layer: 'foreground',
+        drawFn: Drawings.flower, label: 'Magische Bloem',
+        description: 'Een betoverde bloem. Klik om pollen vrij te laten!'
+      }));
+    }
+    // Butterflies
+    for (let i = 0; i < 4; i++) {
+      const b = new SceneObject({
+        type: 'butterfly', x: rand(100, 1100), y: rand(200, 450),
+        w: 30, h: 20, color: pick(theme.accent), secondaryColor: pick(theme.particles),
+        interactive: true, layer: 'foreground',
+        drawFn: Drawings.butterfly,
+        label: 'Vlinder', description: 'Een kleurrijke vlinder fladdert rond'
+      });
+      b.vx = rand(-0.5, 0.5);
+      b.vy = rand(-0.3, 0.3);
+      b._baseX = b.x;
+      b._baseY = b.y;
+      objs.push(b);
+    }
+    // Character
+    const char = new SceneObject({
+      type: 'character', x: 600, y: 520,
+      w: 40, h: 50, color: '#ec4899', secondaryColor: '#a78bfa',
+      interactive: true, controllable: true, layer: 'foreground',
+      drawFn: Drawings.character,
+      label: 'Tuinier', description: 'De betoverde tuinier. Gebruik pijltjestoetsen!'
+    });
+    objs.push(char);
+    return { objects: objs, particleType: 'petal', character: char };
+  },
+  
+  ice(theme) {
+    const objs = [];
+    // Mountains
+    for (let i = 0; i < 3; i++) {
+      objs.push(new SceneObject({
+        type: 'mountain', x: 100 + i*450, y: 400,
+        w: rand(300,450), h: rand(200,300),
+        color: pick(['#94a3b8','#cbd5e1','#64748b']),
+        layer: 'background', drawFn: Drawings.mountain,
+        label: 'IJsberg', description: 'Een enorme ijsberg torent op'
+      }));
+    }
+    // Snowflakes (objects)
+    for (let i = 0; i < 5; i++) {
+      objs.push(new SceneObject({
+        type: 'snowflake', x: rand(100, 1100), y: rand(100, 400),
+        w: rand(25, 45), h: rand(25, 45),
+        color: pick(theme.accent), interactive: i < 3,
+        layer: 'foreground', drawFn: Drawings.snowflake,
+        label: 'IJskristal', description: 'Een prachtig ijskristal. Klik om het te laten draaien!'
+      }));
+    }
+    // Castle (ice palace)
+    objs.push(new SceneObject({
+      type: 'castle', x: 600, y: 380,
+      w: 180, h: 160, color: '#bae6fd', secondaryColor: '#22d3ee',
+      interactive: true, layer: 'midground',
+      drawFn: Drawings.castle, label: 'IJspaleis', description: 'Het legendarische ijspaleis van het noorden'
+    }));
+    // Character
+    const char = new SceneObject({
+      type: 'character', x: 600, y: 540,
+      w: 40, h: 50, color: '#0ea5e9', secondaryColor: '#e2e8f0',
+      interactive: true, controllable: true, layer: 'foreground',
+      drawFn: Drawings.character,
+      label: 'IJsverkenner', description: 'Een moedige verkenner. Gebruik pijltjestoetsen!'
+    });
+    objs.push(char);
+    return { objects: objs, particleType: 'snow', character: char };
+  },
+  
+  volcano(theme) {
+    const objs = [];
+    // Volcano
+    objs.push(new SceneObject({
+      type: 'volcano', x: 600, y: 450,
+      w: 350, h: 300, color: '#374151',
+      interactive: true, layer: 'midground',
+      drawFn: Drawings.volcano, label: 'Vulkaan',
+      description: 'Een actieve vulkaan! Klik voor een uitbarsting!'
+    }));
+    // Rocks (as small mountains)
+    for (let i = 0; i < 4; i++) {
+      objs.push(new SceneObject({
+        type: 'mountain', x: rand(50, 1150), y: rand(500, 600),
+        w: rand(80, 150), h: rand(60, 100),
+        color: pick(['#292524','#44403c','#57534e']),
+        interactive: i < 2, layer: 'midground',
+        drawFn: Drawings.mountain, label: 'Lavagrots',
+        description: 'Een verweerde rots gevormd door lava'
+      }));
+    }
+    // Fire stars
+    for (let i = 0; i < 4; i++) {
+      objs.push(new SceneObject({
+        type: 'star_obj', x: rand(400, 800), y: rand(100, 300),
+        w: rand(15, 25), h: rand(15, 25),
+        color: pick(['#ef4444','#f97316','#fbbf24']),
+        interactive: true, layer: 'foreground',
+        drawFn: Drawings.star, label: 'Vuursteen',
+        description: 'Een gloeiende vuursteen uit de vulkaan'
+      }));
+    }
+    // Character
+    const char = new SceneObject({
+      type: 'character', x: 200, y: 550,
+      w: 40, h: 50, color: '#dc2626', secondaryColor: '#f97316',
+      interactive: true, controllable: true, layer: 'foreground',
+      drawFn: Drawings.character,
+      label: 'Vulkanoloog', description: 'Een moedige vulkanoloog. Gebruik pijltjestoetsen!'
+    });
+    objs.push(char);
+    return { objects: objs, particleType: 'ember', character: char };
+  }
+};
+
+// ============================================
+// STORY GENERATOR
+// ============================================
+function generateStory(themeName, theme) {
+  const stories = {
+    forest: [
+      `${theme.emoji} Je betreedt een betoverend bos waar de bomen fluisteren...`,
+      "De magische paddenstoelen verlichten je pad met een zachte gloed.",
+      "Vlinders dansen om je heen en leiden je dieper het woud in.",
+      "Tussen de oude bomen voel je de magie van het oerwoud...",
+      "Elk blad dat valt vertelt een verhaal van duizenden jaren."
+    ],
+    ocean: [
+      `${theme.emoji} Je duikt in de diepte van een kristalheldere oceaan...`,
+      "Tropische vissen flitsen in alle kleuren van de regenboog voorbij.",
+      "Koraalriffen strekken zich uit als onderwatertuinen vol leven.",
+      "Luchtbellen stijgen langzaam op naar het verre oppervlak...",
+      "In de diepte ligt een wereld die weinigen ooit hebben gezien."
+    ],
+    space: [
+      `${theme.emoji} Je lanceert je raket in de eindeloze kosmos...`,
+      "Sterren twinkelende als diamanten in het oneindige duister.",
+      "Mysterieuze planeten draaien langzaam om verre zonnen.",
+      "De melkweg strekt zich uit als een lint van licht...",
+      "Elke ster is een verhaal, elke planeet een nieuw avontuur."
+    ],
+    desert: [
+      `${theme.emoji} De zon brandt boven de eindeloze zandvlaktes...`,
+      "Zandduinen vormen golven in een zee van goud.",
+      "Cactussen staan als stille wachters in de woestijn.",
+      "Een warme wind fluistert geheimen van oude beschavingen...",
+      "De woestijn leeft, zelfs wanneer alles stil lijkt."
+    ],
+    castle: [
+      `${theme.emoji} Hoog boven de wolken verrijst een majestueus kasteel...`,
+      "Torens reiken naar de sterren, versierd met gouden vlaggen.",
+      "Wolken drijven langzaam voorbij als zachte kussens.",
+      "In dit hemelse koninkrijk worden dromen werkelijkheid...",
+      "De ridders van het wolkenkasteel beschermen het licht."
+    ],
+    garden: [
+      `${theme.emoji} Een betoverde tuin ontvouwt zich voor je ogen...`,
+      "Magische bloemen bloeien in kleuren die je nooit eerder zag.",
+      "Vlinders dragen sprookjes van bloem tot bloem.",
+      "De lucht is gevuld met de zoete geur van magie...",
+      "In deze tuin groeit alles wat je je kunt voorstellen."
+    ],
+    ice: [
+      `${theme.emoji} Het ijspaleis glanst in het noorderlicht...`,
+      "IJskristallen zweven als diamanten door de bevroren lucht.",
+      "De bergen van ijs en sneeuw bewaken dit bevroren koninkrijk.",
+      "Elk sneeuwvlok is uniek, een kunstwerk van de natuur...",
+      "In de stilte van het ijs hoor je de echo van eeuwen."
+    ],
+    volcano: [
+      `${theme.emoji} De aarde beeft terwijl de vulkaan tot leven komt...`,
+      "Gloeiende vuurstenen schieten de lucht in als vallende sterren.",
+      "Lavastromen tekenen vurige rivieren over het donkere gesteente.",
+      "De hitte is intens, maar de schoonheid is adembenemend...",
+      "In het hart van de vulkaan brandt het vuur van de aarde."
+    ]
+  };
+  return stories[themeName] || stories.forest;
+}
+
+// ============================================
+// BACKGROUND RENDERER (Layered)
+// ============================================
+function drawBackground(theme, themeName) {
+  // Sky gradient
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  skyGrad.addColorStop(0, theme.sky[0]);
+  skyGrad.addColorStop(0.5, theme.sky[1]);
+  skyGrad.addColorStop(1, theme.sky[2] || theme.sky[0]);
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Theme-specific background elements
+  if (themeName === 'space') {
+    // Distant stars
+    for (let i = 0; i < 120; i++) {
+      const sx = (i * 97 + frameCount * 0.02 * (i % 3 + 1)) % canvas.width;
+      const sy = (i * 137) % (canvas.height * 0.8);
+      const brightness = 0.3 + Math.sin(frameCount * 0.05 + i) * 0.3;
+      ctx.fillStyle = `rgba(255,255,255,${brightness})`;
+      ctx.beginPath();
+      ctx.arc(sx, sy, Math.random() * 1.5 + 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Nebula
+    const nebGrad = ctx.createRadialGradient(400, 300, 50, 400, 300, 300);
+    nebGrad.addColorStop(0, 'rgba(139,92,246,0.08)');
+    nebGrad.addColorStop(0.5, 'rgba(59,130,246,0.05)');
+    nebGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = nebGrad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  
+  if (themeName === 'ocean') {
+    // Water caustics
+    for (let i = 0; i < 8; i++) {
+      const cx = (i * 170 + Math.sin(frameCount * 0.01 + i) * 30) % canvas.width;
+      const cy = 100 + i * 70;
+      ctx.strokeStyle = `rgba(34,211,238,${0.03 + Math.sin(frameCount*0.02+i)*0.02})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 50 + Math.sin(frameCount*0.03+i)*20, 0, Math.PI*2);
+      ctx.stroke();
+    }
+  }
+  
+  if (themeName === 'volcano') {
+    // Red sky glow
+    const lavaGlow = ctx.createRadialGradient(600, 300, 50, 600, 400, 400);
+    lavaGlow.addColorStop(0, `rgba(239,68,68,${0.1 + Math.sin(frameCount*0.03)*0.05})`);
+    lavaGlow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = lavaGlow;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  
+  if (themeName === 'ice') {
+    // Aurora borealis
+    for (let i = 0; i < 5; i++) {
+      const y = 80 + i * 30;
+      const wave = Math.sin(frameCount * 0.008 + i * 0.5) * 40;
+      ctx.strokeStyle = `rgba(${34+i*40},${211-i*20},238,${0.06 + Math.sin(frameCount*0.02+i)*0.03})`;
+      ctx.lineWidth = 15;
+      ctx.beginPath();
+      ctx.moveTo(0, y + wave);
+      for (let x = 0; x < canvas.width; x += 20) {
+        ctx.lineTo(x, y + Math.sin(x*0.005 + frameCount*0.01 + i)*30 + wave);
+      }
+      ctx.stroke();
+    }
+  }
+  
+  // Ground
+  const groundY = themeName === 'ocean' ? canvas.height : canvas.height * 0.7;
+  if (themeName !== 'ocean' && themeName !== 'space') {
+    const groundGrad = ctx.createLinearGradient(0, groundY, 0, canvas.height);
+    groundGrad.addColorStop(0, theme.ground[0]);
+    groundGrad.addColorStop(0.5, theme.ground[1]);
+    groundGrad.addColorStop(1, theme.ground[2] || theme.ground[0]);
+    ctx.fillStyle = groundGrad;
+    
+    // Slightly curved ground
+    ctx.beginPath();
+    ctx.moveTo(0, groundY);
+    for (let x = 0; x <= canvas.width; x += 50) {
+      const gy = groundY + Math.sin(x * 0.005 + 1) * 15;
+      ctx.lineTo(x, gy);
+    }
+    ctx.lineTo(canvas.width, canvas.height);
+    ctx.lineTo(0, canvas.height);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+// ============================================
+// TOOLTIP / TEXT BALLOON
+// ============================================
+function showTooltip(obj, canvasRect) {
+  const screenX = obj.x / canvas.width * canvasRect.width + canvasRect.left;
+  const screenY = (obj.y - obj.h * 0.8) / canvas.height * canvasRect.height + canvasRect.top;
+  tooltipEl.textContent = obj.description || obj.label;
+  tooltipEl.style.left = screenX + 'px';
+  tooltipEl.style.top = (screenY - 40) + 'px';
+  tooltipEl.style.transform = 'translateX(-50%)';
+  tooltipEl.style.opacity = '1';
+}
+
+function hideTooltip() {
+  tooltipEl.style.opacity = '0';
+}
+
+// ============================================
+// MAIN ANIMATION LOOP
+// ============================================
+function animate() {
+  if (!currentTheme) return;
+  const theme = THEMES[currentTheme];
+  
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  frameCount++;
+  
+  // Draw background layer
+  drawBackground(theme, currentTheme);
+  
+  // Update and draw objects by layer
+  const layerOrder = ['background', 'midground', 'foreground', 'ui'];
+  
+  for (const layer of layerOrder) {
+    const layerObjs = sceneObjects.filter(o => o.layer === layer);
+    for (const obj of layerObjs) {
+      obj.update();
+      
+      // Wrap-around for moving objects
+      if (obj.type === 'cloud') {
+        if (obj.x > canvas.width + 100) obj.x = -100;
+      }
+      if (obj.type === 'fish') {
+        if (obj.x > canvas.width + 50) { obj.x = -50; }
+        if (obj.x < -50) { obj.x = canvas.width + 50; }
+      }
+      // Butterfly wandering
+      if (obj.type === 'butterfly' && obj._baseX !== undefined) {
+        obj.x = obj._baseX + Math.sin(frameCount * 0.015 + obj.bobOffset) * 80;
+        obj.y = obj._baseY + Math.cos(frameCount * 0.02 + obj.bobOffset) * 40;
+      }
+      // Bubble float
+      if (obj.type === 'bubble_obj') {
+        obj.y -= 0.3;
+        obj.x += Math.sin(frameCount * 0.02 + obj.bobOffset) * 0.3;
+        if (obj.y < -30) obj.y = canvas.height + 30;
+      }
+      
+      obj.draw(ctx);
+    }
+  }
+  
+  // Update and draw particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    particles[i].update();
+    particles[i].draw(ctx);
+    if (particles[i].life <= 0 || particles[i].y > canvas.height + 20) {
+      particles.splice(i, 1);
+    }
+  }
+  
+  // Keep spawning ambient particles
+  if (frameCount % 10 === 0 && particles.length < 200) {
+    const pTypes = {
+      forest: 'leaf', ocean: 'bubble', space: 'star',
+      desert: 'sand', castle: 'sparkle', garden: 'petal',
+      ice: 'snow', volcano: 'ember'
+    };
+    spawnParticles(2, pTypes[currentTheme] || 'leaf', theme);
+  }
+  
+  // Story progression
+  storyTimer++;
+  if (storyTimer % 300 === 0 && currentStoryIndex < storyLines.length - 1) {
+    currentStoryIndex++;
+    updateStoryDisplay();
+  }
+  
+  animationId = requestAnimationFrame(animate);
+}
+
+function updateStoryDisplay() {
+  const storyEl = document.getElementById('storyText');
+  const line = storyLines[currentStoryIndex];
+  // Typewriter effect
+  storyEl.innerHTML = '';
+  let charIdx = 0;
+  const typeInterval = setInterval(() => {
+    if (charIdx < line.length) {
+      storyEl.innerHTML += line[charIdx];
+      charIdx++;
+    } else {
+      clearInterval(typeInterval);
+      // Add progress dots
+      const progress = storyLines.map((_, i) => 
+        i <= currentStoryIndex ? '<span class="text-purple-400">●</span>' : '<span class="text-gray-700">●</span>'
+      ).join(' ');
+      storyEl.innerHTML += `<br><div class="mt-2 text-center text-xs">${progress}</div>`;
+    }
+  }, 30);
+}
+
+// ============================================
+// GENERATE SCENE
+// ============================================
+function generateScene() {
+  const prompt = document.getElementById('promptInput').value.trim();
+  if (!prompt) {
+    document.getElementById('promptInput').placeholder = 'Typ iets! bijv. "magische boswandeling"';
+    document.getElementById('promptInput').focus();
+    return;
+  }
+  
+  // Stop previous animation
+  if (animationId) cancelAnimationFrame(animationId);
+  
+  // Detect theme
+  const themeName = detectTheme(prompt);
+  currentTheme = themeName;
+  const theme = THEMES[themeName];
+  
+  // Reset state
+  sceneObjects = [];
+  particles = [];
+  frameCount = 0;
+  storyTimer = 0;
+  currentStoryIndex = 0;
+  characterObj = null;
+  keysPressed = {};
+  
+  // Generate scene objects
+  const generator = SceneGenerators[themeName] || SceneGenerators.forest;
+  const sceneData = generator(theme);
+  sceneObjects = sceneData.objects;
+  characterObj = sceneData.character;
+  
+  // Initial particles
+  const pTypes = {
+    forest: 'leaf', ocean: 'bubble', space: 'star',
+    desert: 'sand', castle: 'sparkle', garden: 'petal',
+    ice: 'snow', volcano: 'ember'
+  };
+  spawnParticles(50, pTypes[themeName] || 'leaf', theme);
+  
+  // Generate story
+  storyLines = generateStory(themeName, theme);
+  updateStoryDisplay();
+  
+  // Update info
+  const interactiveCount = sceneObjects.filter(o => o.interactive).length;
+  document.getElementById('sceneInfo').textContent = `Scène: ${theme.emoji} ${themeName.charAt(0).toUpperCase() + themeName.slice(1)} — Mood: ${theme.mood}`;
+  document.getElementById('objectCount').textContent = `Objecten: ${sceneObjects.length} | Interactief: ${interactiveCount}`;
+  
+  // Start animation
+  animate();
+}
+
+// ============================================
+// EVENT HANDLERS
+// ============================================
+canvas.addEventListener('mousemove', (e) => {
+  const coords = getCanvasCoords(e);
+  mouseX = coords.x;
+  mouseY = coords.y;
+  
+  hoveredObject = null;
+  for (let i = sceneObjects.length - 1; i >= 0; i--) {
+    const obj = sceneObjects[i];
+    obj.hovered = false;
+    if (obj.interactive && obj.contains(mouseX, mouseY)) {
+      obj.hovered = true;
+      hoveredObject = obj;
+      break;
+    }
+  }
+  
+  if (hoveredObject) {
+    canvas.style.cursor = 'pointer';
+    showTooltip(hoveredObject, canvas.getBoundingClientRect());
+  } else {
+    canvas.style.cursor = 'crosshair';
+    hideTooltip();
+  }
+});
+
+canvas.addEventListener('click', (e) => {
+  if (!currentTheme) return;
+  const coords = getCanvasCoords(e);
+  const theme = THEMES[currentTheme];
+  
+  // Click particles regardless
+  spawnClickParticles(coords.x, coords.y, theme);
+  
+  // Check object clicks
+  for (let i = sceneObjects.length - 1; i >= 0; i--) {
+    const obj = sceneObjects[i];
+    if (obj.interactive && obj.contains(coords.x, coords.y)) {
+      obj.clickAnim = 1;
+      obj.clicked = !obj.clicked;
+      
+      // Special interactions
+      if (obj.type === 'fish') {
+        obj.vx = -obj.vx;
+      }
+      if (obj.type === 'star_obj') {
+        obj.scale = obj.scale > 1.3 ? 1 : 1.5;
+      }
+      if (obj.type === 'castle') {
+        for (let j = 0; j < 20; j++) {
+          const p = new Particle(obj.x + rand(-40,40), obj.y - obj.h*0.5, pick(theme.particles), 'sparkle');
+          p.vy = rand(-3, -1);
+          p.vx = rand(-2, 2);
+          particles.push(p);
+        }
+      }
+      if (obj.type === 'volcano') {
+        // Eruption!
+        for (let j = 0; j < 40; j++) {
+          const p = new Particle(obj.x + rand(-20,20), obj.y - obj.h*0.4, pick(['#ef4444','#f97316','#fbbf24']), 'ember');
+          p.vy = rand(-5, -1);
+          p.vx = rand(-3, 3);
+          particles.push(p);
+        }
+      }
+      if (obj.type === 'mushroom' || obj.type === 'flower') {
+        for (let j = 0; j < 12; j++) {
+          const p = new Particle(obj.x, obj.y - 10, pick(theme.particles), 'sparkle');
+          p.vy = rand(-2, -0.5);
+          p.vx = rand(-2, 2);
+          particles.push(p);
+        }
+      }
+      if (obj.type === 'planet') {
+        // Orbit effect
+        for (let j = 0; j < 25; j++) {
+          const angle = (j / 25) * Math.PI * 2;
+          const p = new Particle(
+            obj.x + Math.cos(angle) * obj.w * 0.5,
+            obj.y + Math.sin(angle) * obj.w * 0.5,
+            pick(theme.particles), 'sparkle'
+          );
+          p.vx = Math.cos(angle) * 2;
+          p.vy = Math.sin(angle) * 2;
+          particles.push(p);
+        }
+      }
+      if (obj.type === 'snowflake') {
+        obj.scale = obj.scale > 1.3 ? 1 : 1.5;
+        for (let j = 0; j < 10; j++) {
+          const p = new Particle(obj.x, obj.y, '#ffffff', 'snow');
+          p.vx = rand(-2, 2);
+          p.vy = rand(-1, 1);
+          particles.push(p);
+        }
+      }
+      
+      break;
+    }
+  }
+});
+
+canvas.addEventListener('mouseleave', () => {
+  hideTooltip();
+});
+
+// Keyboard
+document.addEventListener('keydown', (e) => {
+  keysPressed[e.key] = true;
+  if (e.key === ' ' && currentTheme) {
+    e.preventDefault();
+    const theme = THEMES[currentTheme];
+    const pTypes = {
+      forest: 'leaf', ocean: 'bubble', space: 'star',
+      desert: 'sand', castle: 'sparkle', garden: 'petal',
+      ice: 'snow', volcano: 'ember'
+    };
+    spawnParticles(20, pTypes[currentTheme] || 'leaf', theme);
+  }
+  if (e.key === 'r' || e.key === 'R') {
+    if (currentTheme && document.activeElement !== document.getElementById('promptInput')) {
+      generateScene();
+    }
+  }
+});
+
+document.addEventListener('keyup', (e) => {
+  keysPressed[e.key] = false;
+});
+
+// Suggestion clicks
+function useSuggestion(el) {
+  const text = el.textContent.replace(/^[^\s]+\s/, '');
+  document.getElementById('promptInput').value = text;
+  generateScene();
+}
+
+// ============================================
+// INITIAL WELCOME SCREEN
+// ============================================
+function drawWelcome() {
+  const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  grad.addColorStop(0, '#0a0a1a');
+  grad.addColorStop(0.5, '#1a1040');
+  grad.addColorStop(1, '#0a0a1a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Animated stars
+  const time = Date.now() * 0.001;
+  for (let i = 0; i < 80; i++) {
+    const x = (i * 137 + Math.sin(time + i) * 20) % canvas.width;
+    const y = (i * 97) % canvas.height;
+    const bright = 0.3 + Math.sin(time * 2 + i) * 0.3;
+    ctx.fillStyle = `rgba(255,255,255,${bright})`;
+    ctx.beginPath();
+    ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  
+  // Title
+  ctx.fillStyle = '#a78bfa';
+  ctx.font = 'bold 42px Cinzel, serif';
+  ctx.textAlign = 'center';
+  ctx.shadowColor = '#a78bfa';
+  ctx.shadowBlur = 20;
+  ctx.fillText('Story Canvas Generator', canvas.width/2, canvas.height/2 - 40);
+  ctx.shadowBlur = 0;
+  
+  // Subtitle
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '18px Inter, sans-serif';
+  ctx.fillText('Voer een verhaal-prompt in en druk op "Generate Scene"', canvas.width/2, canvas.height/2 + 10);
+  
+  // Animated border glow
+  const glowAlpha = 0.3 + Math.sin(time * 2) * 0.2;
+  ctx.strokeStyle = `rgba(139,92,246,${glowAlpha})`;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(50, 50, canvas.width - 100, canvas.height - 100);
+  
+  // Floating icons
+  const icons = ['🌲', '🌊', '🚀', '🏰', '🌸', '❄️', '🌋', '🏜️'];
+  for (let i = 0; i < icons.length; i++) {
+    const angle = time * 0.3 + (i / icons.length) * Math.PI * 2;
+    const radius = 180;
+    const ix = canvas.width/2 + Math.cos(angle) * radius;
+    const iy = canvas.height/2 + 60 + Math.sin(angle) * 60;
+    ctx.font = '28px sans-serif';
+    ctx.fillText(icons[i], ix, iy);
+  }
+  
+  requestAnimationFrame(drawWelcome);
+}
+
+// Start welcome screen
+drawWelcome();
+</script>
+</body>
+</html>
