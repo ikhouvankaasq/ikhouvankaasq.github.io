@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Low Poly Tropical Island</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            overflow: hidden;
+            background-color: #1a1a2e;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #fff;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* Glassmorphism UI */
+        .ui-container {
+            position: absolute;
+            z-index: 10;
+            pointer-events: none;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 24px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 14px 24px;
+            border-radius: 16px;
+            align-self: flex-start;
+            pointer-events: auto;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .header:hover {
+            transform: translateY(-2px);
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            background: linear-gradient(45deg, #ffeaa7, #fab1a0, #74b9ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 2px;
+        }
+
+        p.subtitle {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            letter-spacing: 0.5px;
+        }
+
+        .controls-card {
+            background: rgba(20, 25, 40, 0.5);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 12px 16px;
+            border-radius: 20px;
+            align-self: center;
+            pointer-events: auto;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            outline: none;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        .btn.active {
+            background: linear-gradient(135deg, #0984e3, #00cec9);
+            border-color: rgba(255, 255, 255, 0.6);
+            box-shadow: 0 0 15px rgba(0, 206, 201, 0.5);
+        }
+
+        .hints {
+            position: absolute;
+            bottom: 24px;
+            right: 24px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(8px);
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            opacity: 0.7;
+            pointer-events: none;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* Loading indicator */
+        #loader {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0f172a;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            transition: opacity 0.8s ease;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left-color: #00cec9;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    <!-- Three.js and OrbitControls CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <div id="loader">
+        <div class="spinner"></div>
+        <p style="margin-top: 16px; font-weight: 500; letter-spacing: 1px;">CREATING PARADISE...</p>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <div class="ui-container">
+        <div class="header">
+            <h1>Isla Paradiso</h1>
+            <p class="subtitle">Low-Poly 3D Environment</p>
+        </div>
+
+        <div class="controls-card">
+            <button class="btn active" id="btn-sunset" onclick="setPreset('sunset')">🌅 Sunset</button>
+            <button class="btn" id="btn-day" onclick="setPreset('day')">☀️ Day</button>
+            <button class="btn" id="btn-night" onclick="setPreset('night')">🌙 Night</button>
+            <button class="btn" id="btn-sound" onclick="toggleAudio()">🔇 Ocean FX</button>
+        </div>
+
+        <div class="hints">
+            🖱️ Left Click + Drag to Rotate | Right Click to Pan | Scroll to Zoom
+        </div>
+    </div>
+
+    <script>
+        // --- SOUND GENERATOR (Procedural Web Audio API) ---
+        class OceanAudio {
+            constructor() {
+                this.ctx = null;
+                this.isPlaying = false;
+                this.gainNode = null;
+            }
+
+            init() {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioContext();
+                
+                // Pink noise buffer for deep ocean waves
+                const bufferSize = this.ctx.sampleRate * 2;
+                const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+                for (let i = 0; i < bufferSize; i++) {
+                    const white = Math.random() * 2 - 1;
+                    b0 = 0.99886 * b0 + white * 0.0555179;
+                    b1 = 0.99332 * b1 + white * 0.0750759;
+                    b2 = 0.96900 * b2 + white * 0.1538520;
+                    b3 = 0.86650 * b3 + white * 0.3104856;
+                    b4 = 0.55000 * b4 + white * 0.5329522;
+                    b5 = -0.7616 * b5 - white * 0.0168980;
+                    output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+                    output[i] *= 0.11;
+                    b6 = white * 0.115926;
+                }
+
+                this.whiteNoise = this.ctx.createBufferSource();
+                this.whiteNoise.buffer = noiseBuffer;
+                this.whiteNoise.loop = true;
+
+                // Filter to shape wave whoosh
+                this.filter = this.ctx.createBiquadFilter();
+                this.filter.type = 'lowpass';
+                this.filter.frequency.setValueAtTime(250, this.ctx.currentTime);
+
+                // LFO to modulate wave frequency (swell)
+                this.lfo = this.ctx.createOscillator();
+                this.lfo.frequency.setValueAtTime(0.12, this.ctx.currentTime);
+                const lfoGain = this.ctx.createGain();
+                lfoGain.gain.setValueAtTime(200, this.ctx.currentTime);
+                this.lfo.connect(this.filter.frequency);
+
+                this.gainNode = this.ctx.createGain();
+                this.gainNode.gain.setValueAtTime(0.001, this.ctx.currentTime);
+
+                this.whiteNoise.connect(this.filter);
+                this.filter.connect(this.gainNode);
+                this.gainNode.connect(this.ctx.destination);
+
+                this.whiteNoise.start();
+                this.lfo.start();
+            }
+
+            toggle() {
+                if (!this.ctx) this.init();
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+
+                if (this.isPlaying) {
+                    this.gainNode.gain.setTargetAtTime(0.0001, this.ctx.currentTime, 0.6);
+                    this.isPlaying = false;
+                } else {
+                    this.gainNode.gain.setTargetAtTime(0.6, this.ctx.currentTime, 0.8);
+                    this.isPlaying = true;
+                }
+                return this.isPlaying;
+            }
+        }
+
+        const oceanAudio = new OceanAudio();
+        function toggleAudio() {
+            const active = oceanAudio.toggle();
+            const btn = document.getElementById('btn-sound');
+            btn.innerHTML = active ? "🔊 Ocean FX" : "🔇 Ocean FX";
+            if(active) btn.classList.add('active');
+            else btn.classList.remove('active');
+        }
+
+        // --- THREE.JS SCENE SETUP ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xfdcb6e);
+        scene.fog = new THREE.FogExp2(0xfdcb6e, 0.015);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(45, 26, 52);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.1;
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.02; // Keep above sea level
+        controls.minDistance = 15;
+        controls.maxDistance = 120;
+        controls.target.set(0, 3, 0);
+
+        // --- PALETTES & PRESETS ---
+        const PRESETS = {
+            sunset: {
+                sky: 0xfd9644,
+                fog: 0xfa8231,
+                sun: 0xffeaa7,
+                sunIntensity: 2.2,
+                sunPos: [60, 25, -50],
+                ambient: 0x884444,
+                ambientIntensity: 0.9,
+                waterColor: 0x1289a7,
+                waterDeep: 0x0652dd,
+                waterOpacity: 0.85,
+                exposure: 1.1
+            },
+            day: {
+                sky: 0x70a1ff,
+                fog: 0xa1c4fd,
+                sun: 0xffffff,
+                sunIntensity: 2.8,
+                sunPos: [40, 60, 30],
+                ambient: 0x74b9ff,
+                ambientIntensity: 1.1,
+                waterColor: 0x00cec9,
+                waterDeep: 0x0984e3,
+                waterOpacity: 0.8,
+                exposure: 1.25
+            },
+            night: {
+                sky: 0x070b19,
+                fog: 0x0a0e27,
+                sun: 0x74b9ff,
+                sunIntensity: 0.6,
+                sunPos: [-40, 45, -30],
+                ambient: 0x1e272e,
+                ambientIntensity: 0.5,
+                waterColor: 0x0c2461,
+                waterDeep: 0x040e2b,
+                waterOpacity: 0.9,
+                exposure: 0.9
+            }
+        };
+
+        let currentPreset = 'sunset';
+
+        // --- LIGHTS ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+        scene.add(ambientLight);
+
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444455, 0.6);
+        hemiLight.position.set(0, 50, 0);
+        scene.add(hemiLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.near = 0.5;
+        dirLight.shadow.camera.far = 160;
+        const d = 35;
+        dirLight.shadow.camera.left = -d;
+        dirLight.shadow.camera.right = d;
+        dirLight.shadow.camera.top = d;
+        dirLight.shadow.camera.bottom = -d;
+        dirLight.shadow.bias = -0.0005;
+        scene.add(dirLight);
+
+        // Campfire PointLight
+        const fireLight = new THREE.PointLight(0xff7700, 2.5, 18, 1.5);
+        fireLight.position.set(0.5, 3.8, 1.2);
+        fireLight.castShadow = true;
+        scene.add(fireLight);
+
+        // --- PROCEDURAL LOW-POLY ASSETS ---
+
+        // Shared Low Poly Materials
+        const sandMaterial = new THREE.MeshStandardMaterial({
+            color: 0xe5c386,
+            roughness: 0.9,
+            metalness: 0.1,
+            flatShading: true
+        });
+
+        const grassMaterial = new THREE.MeshStandardMaterial({
+            color: 0x55aa44,
+            roughness: 0.8,
+            metalness: 0.1,
+            flatShading: true
+        });
+
+        const rockMaterial = new THREE.MeshStandardMaterial({
+            color: 0x636e72,
+            roughness: 0.85,
+            metalness: 0.2,
+            flatShading: true
+        });
+
+        const darkRockMaterial = new THREE.MeshStandardMaterial({
+            color: 0x485460,
+            roughness: 0.9,
+            flatShading: true
+        });
+
+        const woodMaterial = new THREE.MeshStandardMaterial({
+            color: 0x795548,
+            roughness: 0.8,
+            flatShading: true
+        });
+
+        const palmLeafMaterial = new THREE.MeshStandardMaterial({
+            color: 0x2e7d32,
+            roughness: 0.6,
+            metalness: 0.05,
+            flatShading: true,
+            side: THREE.DoubleSide
+        });
+
+        const leafYellowMaterial = new THREE.MeshStandardMaterial({
+            color: 0x8bc34a,
+            roughness: 0.6,
+            flatShading: true,
+            side: THREE.DoubleSide
+        });
+
+        // 1. TERRAIN / ISLAND GENERATION
+        const islandGroup = new THREE.Group();
+        scene.add(islandGroup);
+
+        function createIslandTerrain() {
+            // Main Sandy Beach & Base
+            const baseGeo = new THREE.CylinderGeometry(18, 23, 7, 32, 7);
+            const pos = baseGeo.attributes.position;
+            
+            // Displace vertices to create organic natural low-poly island shape
+            for (let i = 0; i < pos.count; i++) {
+                let vx = pos.getX(i);
+                let vy = pos.getY(i);
+                let vz = pos.getZ(i);
+
+                const angle = Math.atan2(vz, vx);
+                const dist = Math.sqrt(vx * vx + vz * vz);
+
+                // Add organic shoreline noise
+                const noise = Math.sin(angle * 4) * 1.8 + Math.cos(angle * 7) * 1.2 + Math.sin(angle * 13) * 0.5;
+                
+                if (vy < 0) {
+                    // Underwater tapering base
+                    pos.setX(i, vx + noise * 1.5);
+                    pos.setZ(i, vz + noise * 1.5);
+                } else {
+                    // Above water beach slope
+                    const heightNoise = Math.sin(vx * 0.25) * Math.cos(vz * 0.25) * 1.4;
+                    pos.setY(i, vy + heightNoise);
+                    pos.setX(i, vx + noise * (1.0 - (vy / 4.0)));
+                    pos.setZ(i, vz + noise * (1.0 - (vy / 4.0)));
+                }
+            }
+            baseGeo.computeVertexNormals();
+            const baseMesh = new THREE.Mesh(baseGeo, sandMaterial);
+            baseMesh.position.y = 1.0;
+            baseMesh.receiveShadow = true;
+            baseMesh.castShadow = true;
+            islandGroup.add(baseMesh);
+
+            // Lush Grass Hilltop in the center
+            const hillGeo = new THREE.ConeGeometry(12.5, 4.2, 18, 4);
+            const hillPos = hillGeo.attributes.position;
+            for (let i = 0; i < hillPos.count; i++) {
+                let vx = hillPos.getX(i);
+                let vy = hillPos.getY(i);
+                let vz = hillPos.getZ(i);
+                const r = Math.sqrt(vx * vx + vz * vz);
+                const noise = Math.sin(vx * 0.8) * Math.cos(vz * 0.8) * 0.7;
+                hillPos.setX(i, vx + (Math.random() - 0.5) * 0.6);
+                hillPos.setZ(i, vz + (Math.random() - 0.5) * 0.6);
+                hillPos.setY(i, vy + noise);
+            }
+            hillGeo.computeVertexNormals();
+            const hillMesh = new THREE.Mesh(hillGeo, grassMaterial);
+            hillMesh.position.set(-0.5, 4.2, -0.8);
+            hillMesh.receiveShadow = true;
+            hillMesh.castShadow = true;
+            islandGroup.add(hillMesh);
+        }
+        createIslandTerrain();
+
+        // 2. PALM TREE BUILDER
+        function createPalmTree(x, z, scale = 1, rotationY = 0, leanAngle = 0.2) {
+            const palmGroup = new THREE.Group();
+            palmGroup.position.set(x, 0, z);
+            palmGroup.rotation.y = rotationY;
+            palmGroup.scale.set(scale, scale, scale);
+
+            // Trunk: segmented curved stack
+            const segments = 9;
+            let currentY = 3.6;
+            let currentX = 0;
+            let currentZ = 0;
+            let radius = 0.55;
+
+            const trunkGroup = new THREE.Group();
+
+            for (let i = 0; i < segments; i++) {
+                const segHeight = 0.85;
+                const topRadius = radius * 0.92;
+                const segGeo = new THREE.CylinderGeometry(topRadius, radius, segHeight, 6);
+                const segMesh = new THREE.Mesh(segGeo, woodMaterial);
+                
+                segMesh.position.set(currentX, currentY, currentZ);
+                segMesh.rotation.z = leanAngle * (i / segments);
+                segMesh.rotation.x = leanAngle * 0.5 * (i / segments);
+                segMesh.castShadow = true;
+                segMesh.receiveShadow = true;
+                trunkGroup.add(segMesh);
+
+                currentY += segHeight * 0.92;
+                currentX += Math.sin(leanAngle) * 0.35;
+                radius = topRadius;
+            }
+            palmGroup.add(trunkGroup);
+
+            // Coconuts
+            const coconutGeo = new THREE.DodecahedronGeometry(0.28, 0);
+            const coconutMat = new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 0.9, flatShading: true });
+            for (let c = 0; c < 4; c++) {
+                const coconut = new THREE.Mesh(coconutGeo, coconutMat);
+                const cAngle = (c / 4) * Math.PI * 2;
+                coconut.position.set(
+                    currentX + Math.cos(cAngle) * 0.4,
+                    currentY - 0.2,
+                    currentZ + Math.sin(cAngle) * 0.4
+                );
+                coconut.castShadow = true;
+                palmGroup.add(coconut);
+            }
+
+            // Palm Fronds / Leaves
+            const leafCount = 7;
+            for (let j = 0; j < leafCount; j++) {
+                const leafAngle = (j / leafCount) * Math.PI * 2;
+                const leafGroup = new THREE.Group();
+                leafGroup.position.set(currentX, currentY + 0.1, currentZ);
+                leafGroup.rotation.y = leafAngle;
+
+                // Build low-poly curved leaf using linked rhomboid diamonds
+                const leafParts = 5;
+                let partX = 0, partY = 0;
+                for (let k = 0; k < leafParts; k++) {
+                    const leafWidth = (1 - Math.abs(k - 2) / 3.2) * 1.1;
+                    const leafLength = 1.0;
+                    const leafPartGeo = new THREE.PlaneGeometry(leafWidth, leafLength, 1, 1);
+                    const leafMesh = new THREE.Mesh(leafPartGeo, (j % 2 === 0) ? palmLeafMaterial : leafYellowMaterial);
+                    
+                    leafMesh.position.set(0, partY, partX + leafLength / 2);
+                    leafMesh.rotation.x = -0.32 - (k * 0.18); // Natural downward droop
+                    leafMesh.castShadow = true;
+                    leafGroup.add(leafMesh);
+
+                    partX += Math.cos(leafMesh.rotation.x) * leafLength * 0.85;
+                    partY += Math.sin(leafMesh.rotation.x) * leafLength * 0.85;
+                }
+
+                // Add Frond Rib (stem)
+                const stemGeo = new THREE.CylinderGeometry(0.04, 0.08, 4.5, 4);
+                const stemMesh = new THREE.Mesh(stemGeo, woodMaterial);
+                stemMesh.rotation.x = -1.1;
+                stemMesh.position.set(0, -0.4, 1.8);
+                leafGroup.add(stemMesh);
+
+                palmGroup.add(leafGroup);
+            }
+
+            islandGroup.add(palmGroup);
+            return palmGroup;
+        }
+
+        const palms = [
+            createPalmTree(-3, -2, 1.25, 0.4, 0.35),
+            createPalmTree(2, 2.5, 1.1, 2.1, 0.28),
+            createPalmTree(-4.5, 3.5, 0.9, 4.2, 0.42),
+            createPalmTree(4.5, -3, 1.0, 1.1, 0.3),
+            createPalmTree(1, -4.5, 0.75, 5.3, 0.25)
+        ];
+
+        // 3. ROCKS & BOULDERS
+        function createRock(x, y, z, scaleX, scaleY, scaleZ, rotY, mat = rockMaterial) {
+            const rockGeo = new THREE.DodecahedronGeometry(1, 1);
+            const pos = rockGeo.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                const vx = pos.getX(i);
+                const vy = pos.getY(i);
+                const vz = pos.getZ(i);
+                pos.setX(i, vx + (Math.sin(vy * 8) * 0.15));
+                pos.setY(i, vy + (Math.cos(vz * 8) * 0.15));
+                pos.setZ(i, vz + (Math.sin(vx * 8) * 0.15));
+            }
+            rockGeo.computeVertexNormals();
+            const rock = new THREE.Mesh(rockGeo, mat);
+            rock.scale.set(scaleX, scaleY, scaleZ);
+            rock.position.set(x, y, z);
+            rock.rotation.set(Math.random() * 0.5, rotY, Math.random() * 0.5);
+            rock.castShadow = true;
+            rock.receiveShadow = true;
+            islandGroup.add(rock);
+            return rock;
+        }
+
+        // Rocky shoreline and interior formations
+        createRock(-12, 1.2, 5, 2.2, 2.8, 2.5, 0.8, darkRockMaterial);
+        createRock(-13.5, 0.8, 3, 1.5, 1.6, 1.8, 1.2);
+        createRock(11, 1.0, -8, 2.8, 2.2, 2.4, 2.4, darkRockMaterial);
+        createRock(12.5, 0.5, -6.5, 1.4, 1.1, 1.6, 0.4);
+        createRock(4, 3.8, 4, 1.6, 1.8, 1.5, 1.5);
+        createRock(-6, 3.5, -4, 1.4, 2.0, 1.4, 3.1);
+        createRock(0, 0.8, -14, 2.5, 1.5, 2.0, 0.5);
+
+        // 4. LOW-POLY BOAT & DOCK
+        const dockGroup = new THREE.Group();
+        // Dock Planks
+        for (let i = 0; i < 7; i++) {
+            const plankGeo = new THREE.BoxGeometry(2.4, 0.18, 0.7);
+            const plank = new THREE.Mesh(plankGeo, woodMaterial);
+            plank.position.set(0, 1.8, 12 + i * 0.78);
+            plank.rotation.y = (Math.random() - 0.5) * 0.06;
+            plank.castShadow = true;
+            plank.receiveShadow = true;
+            dockGroup.add(plank);
+
+            if (i % 2 === 0) {
+                // Wooden pillars into the water
+                const postGeo = new THREE.CylinderGeometry(0.12, 0.14, 3.2, 5);
+                const post1 = new THREE.Mesh(postGeo, woodMaterial);
+                post1.position.set(-1.05, 0.7, 12 + i * 0.78);
+                post1.castShadow = true;
+                dockGroup.add(post1);
+
+                const post2 = new THREE.Mesh(postGeo, woodMaterial);
+                post2.position.set(1.05, 0.7, 12 + i * 0.78);
+                post2.castShadow = true;
+                dockGroup.add(post2);
+            }
+        }
+        islandGroup.add(dockGroup);
+
+        // Small Rowboat tied to dock
+        const boatGroup = new THREE.Group();
+        const boatMat = new THREE.MeshStandardMaterial({ color: 0x9c3d28, roughness: 0.7, flatShading: true });
+        const boatHullGeo = new THREE.BoxGeometry(1.6, 0.8, 3.8);
+        const bPos = boatHullGeo.attributes.position;
+        for (let i = 0; i < bPos.count; i++) {
+            let y = bPos.getY(i);
+            let z = bPos.getZ(i);
+            if (y < 0) bPos.setX(i, bPos.getX(i) * 0.55); // Taper bottom
+            if (z > 0.8) bPos.setX(i, bPos.getX(i) * 0.2); // Taper front bow
+        }
+        boatHullGeo.computeVertexNormals();
+        const boatHull = new THREE.Mesh(boatHullGeo, boatMat);
+        boatHull.castShadow = true;
+        boatGroup.add(boatHull);
+
+        // Wooden bench inside boat
+        const seatGeo = new THREE.BoxGeometry(1.2, 0.1, 0.5);
+        const seat = new THREE.Mesh(seatGeo, woodMaterial);
+        seat.position.set(0, 0.1, 0);
+        boatGroup.add(seat);
+
+        boatGroup.position.set(2.8, 0.7, 17);
+        boatGroup.rotation.y = 0.35;
+        scene.add(boatGroup);
+
+        // 5. CAMPFIRE & PROPS
+        const fireCampGroup = new THREE.Group();
+        fireCampGroup.position.set(0.5, 4.4, 1.2);
+
+        // Fire stones ring
+        for (let s = 0; s < 8; s++) {
+            const stone = new THREE.Mesh(new THREE.DodecahedronGeometry(0.2, 0), darkRockMaterial);
+            const a = (s / 8) * Math.PI * 2;
+            stone.position.set(Math.cos(a) * 0.65, -0.1, Math.sin(a) * 0.65);
+            stone.scale.set(1, 0.7, 1);
+            fireCampGroup.add(stone);
+        }
+
+        // Fire logs
+        for (let l = 0; l < 3; l++) {
+            const log = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.9, 5), woodMaterial);
+            log.rotation.z = 0.8;
+            log.rotation.y = (l / 3) * Math.PI;
+            log.position.y = 0.05;
+            fireCampGroup.add(log);
+        }
+
+        // Low-poly Flame crystals
+        const flameMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+        const flameMesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.35, 0), flameMat);
+        flameMesh.position.y = 0.35;
+        fireCampGroup.add(flameMesh);
+
+        islandGroup.add(fireCampGroup);
+
+        // 6. LOW POLY OCEAN WATER
+        const waterGeo = new THREE.PlaneGeometry(350, 350, 75, 75);
+        waterGeo.rotateX(-Math.PI / 2);
+
+        // Store initial positions for wave animations
+        const waterPos = waterGeo.attributes.position;
+        const initialWaterY = new Float32Array(waterPos.count);
+        for (let i = 0; i < waterPos.count; i++) {
+            initialWaterY[i] = waterPos.getY(i);
+        }
+
+        const waterMaterial = new THREE.MeshStandardMaterial({
+            color: PRESETS.sunset.waterColor,
+            roughness: 0.15,
+            metalness: 0.1,
+            flatShading: true,
+            transparent: true,
+            opacity: 0.85
+        });
+
+        const waterMesh = new THREE.Mesh(waterGeo, waterMaterial);
+        waterMesh.position.y = 0.5;
+        waterMesh.receiveShadow = true;
+        scene.add(waterMesh);
+
+        // Low-Poly Water Foam Shoreline ring
+        const foamGeo = new THREE.RingGeometry(16, 21, 32);
+        foamGeo.rotateX(-Math.PI / 2);
+        const foamMat = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.3,
+            side: THREE.DoubleSide
+        });
+        const foamMesh = new THREE.Mesh(foamGeo, foamMat);
+        foamMesh.position.y = 0.55;
+        scene.add(foamMesh);
+
+        // 7. LOW-POLY CLOUDS
+        const cloudsGroup = new THREE.Group();
+        scene.add(cloudsGroup);
+
+        const cloudMat = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            roughness: 0.9,
+            flatShading: true,
+            transparent: true,
+            opacity: 0.9
+        });
+
+        function createCloud(x, y, z, s) {
+            const cloud = new THREE.Group();
+            const puffCount = 5 + Math.floor(Math.random() * 4);
+            for (let i = 0; i < puffCount; i++) {
+                const puffGeo = new THREE.DodecahedronGeometry(1.8 + Math.random() * 1.2, 1);
+                const puff = new THREE.Mesh(puffGeo, cloudMat);
+                puff.position.set(
+                    (i - puffCount / 2) * 1.8 + (Math.random() - 0.5) * 0.8,
+                    (Math.random() - 0.5) * 0.8,
+                    (Math.random() - 0.5) * 1.5
+                );
+                cloud.add(puff);
+            }
+            cloud.position.set(x, y, z);
+            cloud.scale.set(s, s * 0.65, s);
+            cloudsGroup.add(cloud);
+            return cloud;
+        }
+
+        const clouds = [
+            createCloud(-50, 32, -40, 3.5),
+            createCloud(45, 28, -60, 4.0),
+            createCloud(-60, 35, 45, 3.8),
+            createCloud(55, 30, 50, 3.2),
+            createCloud(0, 38, -75, 4.5)
+        ];
+
+        // 8. LOW-POLY SEAGULLS (BIRDS)
+        const birdsGroup = new THREE.Group();
+        scene.add(birdsGroup);
+
+        const birdMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+
+        function createBird() {
+            const bird = new THREE.Group();
+            
+            // Bird body
+            const bodyGeo = new THREE.ConeGeometry(0.12, 0.7, 4);
+            bodyGeo.rotateX(Math.PI / 2);
+            const body = new THREE.Mesh(bodyGeo, birdMaterial);
+            bird.add(body);
+
+            // Left Wing
+            const leftWingGeo = new THREE.BufferGeometry();
+            const vertsL = new Float32Array([
+                0, 0, 0.1,
+                -0.9, 0.2, -0.2,
+                0, 0, -0.25
+            ]);
+            leftWingGeo.setAttribute('position', new THREE.BufferAttribute(vertsL, 3));
+            leftWingGeo.computeVertexNormals();
+            const leftWing = new THREE.Mesh(leftWingGeo, birdMaterial);
+            bird.add(leftWing);
+
+            // Right Wing
+            const rightWingGeo = new THREE.BufferGeometry();
+            const vertsR = new Float32Array([
+                0, 0, 0.1,
+                0, 0, -0.25,
+                0.9, 0.2, -0.2
+            ]);
+            rightWingGeo.setAttribute('position', new THREE.BufferAttribute(vertsR, 3));
+            rightWingGeo.computeVertexNormals();
+            const rightWing = new THREE.Mesh(rightWingGeo, birdMaterial);
+            bird.add(rightWing);
+
+            bird.userData = {
+                leftWing: leftWing,
+                rightWing: rightWing,
+                speed: 0.8 + Math.random() * 0.5,
+                orbitRadius: 18 + Math.random() * 20,
+                orbitSpeed: 0.4 + Math.random() * 0.4,
+                angle: Math.random() * Math.PI * 2,
+                baseY: 14 + Math.random() * 8
+            };
+
+            birdsGroup.add(bird);
+            return bird;
+        }
+
+        const birds = [createBird(), createBird(), createBird(), createBird()];
+
+        // --- PRESET SWITCHING & SMOOTH COLOR TRANSITIONS ---
+        let targetSettings = { ...PRESETS.sunset };
+        let animProgress = 1.0;
+
+        function setPreset(name) {
+            currentPreset = name;
+            targetSettings = PRESETS[name];
+
+            // Update UI buttons
+            document.querySelectorAll('.controls-card .btn').forEach(btn => {
+                if (btn.id !== 'btn-sound') btn.classList.remove('active');
+            });
+            document.getElementById(`btn-${name}`).classList.add('active');
+
+            // Trigger smooth transition
+            transitionStartTime = performance.now();
+        }
+
+        // --- INTERACTION: CLICK RAYCASTER FOR WATER RIPPLES & COCONUTS ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        window.addEventListener('pointerdown', (e) => {
+            // Ignore UI clicks
+            if (e.target.closest('.header') || e.target.closest('.controls-card') || e.target.closest('.hints')) return;
+
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersects = raycaster.intersectObjects(islandGroup.children, true);
+            if (intersects.length > 0) {
+                // Gentle bonk effect on click
+                const hitObj = intersects[0].object;
+                const origScale = hitObj.scale.clone();
+                hitObj.scale.multiplyScalar(1.15);
+                setTimeout(() => {
+                    hitObj.scale.copy(origScale);
+                }, 180);
+            }
+        });
+
+        // Hide loader once ready
+        setTimeout(() => {
+            const loader = document.getElementById('loader');
+            loader.style.opacity = '0';
+            setTimeout(() => loader.style.display = 'none', 800);
+        }, 300);
+
+        // --- RESIZE HANDLER ---
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- ANIMATION LOOP ---
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const elapsedTime = clock.getElapsedTime();
+
+            // 1. WAVE SIMULATION (Vertex Displacement)
+            const posAttr = waterGeo.attributes.position;
+            for (let i = 0; i < posAttr.count; i++) {
+                const u = posAttr.getX(i);
+                const w = posAttr.getZ(i);
+
+                // Complex low poly multi-sine wave displacement
+                const wave1 = Math.sin(u * 0.18 + elapsedTime * 1.8) * Math.cos(w * 0.18 + elapsedTime * 1.5) * 0.42;
+                const wave2 = Math.sin(u * 0.35 - elapsedTime * 2.2) * 0.22;
+                const wave3 = Math.cos(w * 0.4 + elapsedTime * 1.2) * 0.18;
+
+                posAttr.setY(i, initialWaterY[i] + wave1 + wave2 + wave3);
+            }
+            waterGeo.computeVertexNormals();
+            posAttr.needsUpdate = true;
+
+            // Shoreline foam pulse
+            foamMesh.scale.setScalar(1.0 + Math.sin(elapsedTime * 2.0) * 0.035);
+
+            // 2. SWAYING PALM LEAVES & TRUNKS
+            palms.forEach((palm, index) => {
+                const offset = index * 1.5;
+                palm.rotation.z = Math.sin(elapsedTime * 1.2 + offset) * 0.03;
+                palm.rotation.x = Math.cos(elapsedTime * 0.9 + offset) * 0.025;
+            });
+
+            // 3. BOAT BOBBING WITH WAVES
+            boatGroup.position.y = 0.65 + Math.sin(elapsedTime * 2.0 + 2.0) * 0.14;
+            boatGroup.rotation.z = Math.sin(elapsedTime * 1.5) * 0.08;
+            boatGroup.rotation.x = 0.05 + Math.cos(elapsedTime * 1.8) * 0.06;
+
+            // 4. FIRE FLICKER
+            const flicker = Math.sin(elapsedTime * 15.0) * 0.2 + Math.cos(elapsedTime * 23.0) * 0.15;
+            fireLight.intensity = 2.4 + flicker;
+            flameMesh.scale.set(1 + flicker * 0.3, 1 + flicker * 0.5, 1 + flicker * 0.3);
+
+            // 5. BIRDS FLYING & FLAPPING
+            birds.forEach(bird => {
+                const bData = bird.userData;
+                bData.angle += bData.orbitSpeed * 0.015;
+                bird.position.x = Math.cos(bData.angle) * bData.orbitRadius;
+                bird.position.z = Math.sin(bData.angle) * bData.orbitRadius;
+                bird.position.y = bData.baseY + Math.sin(elapsedTime * 2.5 + bData.angle) * 1.2;
+
+                // Face fly direction
+                bird.rotation.y = -bData.angle - Math.PI / 2;
+
+                // Flap wings
+                const flap = Math.sin(elapsedTime * 12.0 * bData.speed);
+                bData.leftWing.rotation.z = flap * 0.45;
+                bData.rightWing.rotation.z = -flap * 0.45;
+            });
+
+            // 6. CLOUDS DRIFTING
+            cloudsGroup.children.forEach(cloud => {
+                cloud.position.x += 0.035;
+                if (cloud.position.x > 90) cloud.position.x = -90;
+            });
+
+            // 7. SMOOTH LERP PRESET TRANSITIONS
+            scene.background.lerp(new THREE.Color(targetSettings.sky), 0.04);
+            scene.fog.color.lerp(new THREE.Color(targetSettings.fog), 0.04);
+            dirLight.color.lerp(new THREE.Color(targetSettings.sun), 0.04);
+            dirLight.intensity = THREE.MathUtils.lerp(dirLight.intensity, targetSettings.sunIntensity, 0.04);
+            dirLight.position.lerp(new THREE.Vector3(...targetSettings.sunPos), 0.04);
+
+            ambientLight.color.lerp(new THREE.Color(targetSettings.ambient), 0.04);
+            ambientLight.intensity = THREE.MathUtils.lerp(ambientLight.intensity, targetSettings.ambientIntensity, 0.04);
+
+            waterMaterial.color.lerp(new THREE.Color(targetSettings.waterColor), 0.04);
+            renderer.toneMappingExposure = THREE.MathUtils.lerp(renderer.toneMappingExposure, targetSettings.exposure, 0.04);
+
+            // 8. SLOW IDLE ROTATION WHEN USER IS NOT INTERACTING
+            if (!controls.state || controls.state === -1) {
+                islandGroup.rotation.y += 0.0008;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Apply initial sunset preset
+        setPreset('sunset');
+        animate();
+    </script>
+</body>
+</html>
