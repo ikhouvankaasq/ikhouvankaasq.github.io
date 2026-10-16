@@ -91,9 +91,6 @@
                 const qSnapshot = await getDocs(collection(db, "Questions"));
                 allQuestions = qSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                console.log("Loaded characters:", allCharacters);
-                console.log("Loaded questions:", allQuestions);
-
                 if (allCharacters.length > 0 && allQuestions.length > 0) {
                     statusEl.innerText = "Think of a character, and let the system guess it!";
                     startBtn.innerText = "Start Game";
@@ -102,7 +99,6 @@
                 } else {
                     statusEl.innerText = "Collections are empty in Firebase! Add data first.";
                 }
-
             } catch (error) {
                 console.error("Error loading data:", error);
                 statusEl.innerText = "Error loading data. Check console (F12).";
@@ -138,22 +134,11 @@
         }
 
         function nextStep() {
-            // Als er nog maar 1 personage over is, stop direct en toon het resultaat!
-            if (remainingCharacters.length === 1 || askedQuestionAttributes.size >= allQuestions.length) {
-                showResult();
-                return;
-            }
-
-            // Als er 0 over zijn
-            if (remainingCharacters.length === 0) {
-                showResult();
-                return;
-            }
-
-            // Zoek een vraag die we nog niet gesteld hebben
+            // Zoek een vraag die nog niet gesteld is
             const availableQuestions = allQuestions.filter(q => !askedQuestionAttributes.has(q.attribute));
 
-            if (availableQuestions.length === 0) {
+            // Als er geen vragen meer zijn OF er is nog maar 1 personage over: toon resultaat
+            if (remainingCharacters.length <= 1 || availableQuestions.length === 0) {
                 showResult();
                 return;
             }
@@ -165,27 +150,31 @@
         }
 
         window.answerQuestion = function(answer) {
+            if (!currentQuestion) return;
             const attr = currentQuestion.attribute;
             askedQuestionAttributes.add(attr);
 
+            console.log(`Vraag gesteld over attribuut: '${attr}', Antwoord van speler: ${answer}`);
+
             if (answer !== 'dont_know') {
                 remainingCharacters = remainingCharacters.filter(char => {
-                    // Pak de attributenmap (veilig opvangen als die er niet is)
                     const attrs = char.attributes || {};
                     const val = attrs[attr];
                     
-                    // Super flexibele check: vang boolean true, string "true", 1, etc. op
+                    // Check of het true is (ongeacht of het boolean true of string "true" is)
                     const isTrue = (val === true || val === "true" || val === 1);
 
+                    console.log(`- Personage: ${char.name || char.naam}, Waarde van ${attr}:`, val, `(isTrue: ${isTrue})`);
+
                     if (answer === true) {
-                        return isTrue === true;
+                        return isTrue === true; // Speler zegt JA -> behoud als het true is
                     } else {
-                        return isTrue === false;
+                        return isTrue === false; // Speler zegt NEE -> behoud als het false/niet ingevuld is
                     }
                 });
             }
 
-            console.log("Overgebleven na filter:", remainingCharacters);
+            console.log("Overgebleven personages na filter:", remainingCharacters);
             nextStep();
         }
 
