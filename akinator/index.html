@@ -149,7 +149,7 @@
             document.getElementById('question-text').innerText = currentQuestion.question;
         }
 
-        window.answerQuestion = function(answer) {
+       window.answerQuestion = function(answer) {
             if (!currentQuestion) return;
             const attr = currentQuestion.attribute;
             askedQuestionAttributes.add(attr);
@@ -158,7 +158,8 @@
 
             if (answer !== 'dont_know') {
                 remainingCharacters = remainingCharacters.filter(char => {
-                    const attrs = char.attributes || {};
+                    // Pak de attributenmap of direct het object
+                    const attrs = char.attributes || char;
                     const val = attrs[attr];
                     
                     // Check of het true is (ongeacht of het boolean true of string "true" is)
