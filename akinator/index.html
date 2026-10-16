@@ -15,9 +15,9 @@
         <!-- STAP 1: HOMEPAGE -->
         <div id="screen-home">
             <h1 class="text-3xl font-extrabold mb-2 text-indigo-400">Akinator Clone</h1>
-            <p class="text-slate-400 mb-6">Think of a character, and let the system guess it!</p>
-            <button onclick="goToModeSelect()" class="w-full bg-indigo-600 hover:bg-indigo-500 font-bold py-3 px-6 rounded-xl transition duration-200">
-                Start Game
+            <p id="loading-status" class="text-slate-400 mb-6">Connecting to Firebase...</p>
+            <button id="start-btn" onclick="goToModeSelect()" disabled class="w-full bg-slate-600 cursor-not-allowed font-bold py-3 px-6 rounded-xl transition duration-200">
+                Loading Data...
             </button>
         </div>
 
@@ -48,7 +48,7 @@
 
         <!-- STAP 4: RESULTAAT / GEVONDEN -->
         <div id="screen-result" class="hidden">
-            <h2 class="text-xl font-bold mb-2 text-indigo-400">Is this your character?</h2>
+            <h2 class="text-xl font-bold mb-2 text-indigo-400" id="result-title">Is this your character?</h2>
             <div id="result-box" class="my-6 p-4 bg-slate-700/50 rounded-xl border border-slate-600">
                 <h3 id="result-name" class="text-2xl font-extrabold text-white">Character Name</h3>
             </div>
@@ -71,8 +71,7 @@
             projectId: "akinator-d3903",
             storageBucket: "akinator-d3903.firebasestorage.app",
             messagingSenderId: "13289535157",
-            appId: "1:13289535157:web:d366ce7897703b9e8f30fc",
-            measurementId: "G-XRLPJHZS2W"
+            appId: "1:13289535157:web:d366ce7897703b9e8f30fc"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -87,25 +86,36 @@
 
         // Data inladen vanuit Firestore
         async function loadGameData() {
+            const statusEl = document.getElementById('loading-status');
+            const startBtn = document.getElementById('start-btn');
+
             try {
-                // Haal characters op
                 const charSnapshot = await getDocs(collection(db, "Characters"));
                 allCharacters = charSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                // Haal questions op
                 const qSnapshot = await getDocs(collection(db, "Questions"));
                 allQuestions = qSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                console.log("Loaded characters:", allCharacters.length);
-                console.log("Loaded questions:", allQuestions.length);
+                console.log("Geladen characters:", allCharacters);
+                console.log("Geladen questions:", allQuestions);
+
+                if (allCharacters.length > 0 && allQuestions.length > 0) {
+                    statusEl.innerText = "Think of a character, and let the system guess it!";
+                    startBtn.innerText = "Start Game";
+                    startBtn.disabled = false;
+                    startBtn.className = "w-full bg-indigo-600 hover:bg-indigo-500 cursor-pointer font-bold py-3 px-6 rounded-xl transition duration-200";
+                } else {
+                    statusEl.innerText = "Collections are empty in Firebase! Add data first.";
+                }
+
             } catch (error) {
-                console.error("Error loading data from Firebase:", error);
+                console.error("Fout bij inladen data:", error);
+                statusEl.innerText = "Error loading data. Check console (F12).";
             }
         }
 
         loadGameData();
 
-        // Globale functies koppelen aan window zodat knoppen ze kunnen aanroepen
         window.goToModeSelect = function() {
             document.getElementById('screen-home').classList.add('hidden');
             document.getElementById('screen-modes').classList.remove('hidden');
@@ -118,11 +128,10 @@
 
         window.startGame = function() {
             if (allCharacters.length === 0 || allQuestions.length === 0) {
-                alert("Data is still loading or collections are empty in Firebase!");
+                alert("Data is not loaded yet!");
                 return;
             }
 
-            // Kopieer alle personages om mee te spelen
             remainingCharacters = JSON.parse(JSON.stringify(allCharacters));
             askedQuestionAttributes.clear();
             questionCount = 0;
@@ -134,7 +143,7 @@
         }
 
         function nextStep() {
-            // Check of we nog maar 1 personage over hebben of geen vragen meer hebben
+            // Als er 1 of 0 personages over zijn, of alle vragen zijn op: toon resultaat
             if (remainingCharacters.length <= 1 || askedQuestionAttributes.size >= allQuestions.length) {
                 showResult();
                 return;
@@ -143,7 +152,6 @@
             questionCount++;
             document.getElementById('question-counter').innerText = `Question ${questionCount}`;
 
-            // Filter vragen die we al gesteld hebben
             const availableQuestions = allQuestions.filter(q => !askedQuestionAttributes.has(q.attribute));
 
             if (availableQuestions.length === 0) {
@@ -151,7 +159,6 @@
                 return;
             }
 
-            // Kies voorlopig de eerste beschikbare vraag (of later een slimme 50/50 vraag)
             currentQuestion = availableQuestions[0];
             document.getElementById('question-text').innerText = currentQuestion.question;
         }
@@ -160,18 +167,26 @@
             const attr = currentQuestion.attribute;
             askedQuestionAttributes.add(attr);
 
+            console.log(`--- Vraag over '${attr}' | Antwoord: ${answer} ---`);
+            console.log("Personages voor filter:", remainingCharacters.map(c => c.name || c.naam));
+
             if (answer !== 'dont_know') {
-                // Filter de overgebleven personages
                 remainingCharacters = remainingCharacters.filter(char => {
-                    const charAttrValue = char.attributes && char.attributes[attr] === true;
+                    const attributes = char.attributes || {};
+                    const val = attributes[attr];
+                    
+                    // Check of het attribuut true is (vangt zowel boolean true als string "true" op)
+                    const isTrue = (val === true || val === "true");
+
                     if (answer === true) {
-                        return charAttrValue === true; // Moet true zijn
+                        return isTrue === true; // Moet true zijn
                     } else {
-                        return charAttrValue !== true; // Is false of ontbreekt (wordt als false beschouwd)
+                        return isTrue === false; // Anders (false of niet ingevuld)
                     }
                 });
             }
 
+            console.log("Personages na filter:", remainingCharacters.map(c => c.name || c.naam));
             nextStep();
         }
 
@@ -179,10 +194,18 @@
             document.getElementById('screen-game').classList.add('hidden');
             document.getElementById('screen-result').classList.remove('hidden');
 
+            const titleEl = document.getElementById('result-title');
             const nameEl = document.getElementById('result-name');
-            if (remainingCharacters.length > 0) {
+
+            if (remainingCharacters.length === 1) {
+                titleEl.innerText = "Is this your character?";
+                nameEl.innerText = remainingCharacters[0].name || remainingCharacters[0].naam || "Unknown Character";
+            } else if (remainingCharacters.length > 1) {
+                // Als er na alle vragen nog meerdere over zijn, gokken we de eerste
+                titleEl.innerText = "I think it is:";
                 nameEl.innerText = remainingCharacters[0].name || remainingCharacters[0].naam || "Unknown Character";
             } else {
+                titleEl.innerText = "Oops...";
                 nameEl.innerText = "I couldn't find your character! 😢";
             }
         }
