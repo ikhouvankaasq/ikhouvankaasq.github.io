@@ -149,7 +149,7 @@
             document.getElementById('question-text').innerText = currentQuestion.question;
         }
 
-       window.answerQuestion = function(answer) {
+      window.answerQuestion = function(answer) {
             if (!currentQuestion) return;
             const attr = currentQuestion.attribute;
             askedQuestionAttributes.add(attr);
@@ -158,19 +158,24 @@
 
             if (answer !== 'dont_know') {
                 remainingCharacters = remainingCharacters.filter(char => {
-                    // Pak de attributenmap of direct het object
-                    const attrs = char.attributes || char;
-                    const val = attrs[attr];
+                    let attrs = char.attributes || char;
+                    let val = attrs[attr];
+
+                    // Als het attribuut zelf weer een object/map blijkt te zijn (dubbele nesting in Firebase), 
+                    // pak dan de waarde daar weer uit die dezelfde naam heeft als het attribuut.
+                    if (val && typeof val === 'object') {
+                        val = val[attr];
+                    }
                     
-                    // Check of het true is (ongeacht of het boolean true of string "true" is)
+                    // Check of het true is (vangt boolean true, string "true", of getal 1 op)
                     const isTrue = (val === true || val === "true" || val === 1);
 
                     console.log(`- Personage: ${char.name || char.naam}, Waarde van ${attr}:`, val, `(isTrue: ${isTrue})`);
 
                     if (answer === true) {
-                        return isTrue === true; // Speler zegt JA -> behoud als het true is
+                        return isTrue === true; 
                     } else {
-                        return isTrue === false; // Speler zegt NEE -> behoud als het false/niet ingevuld is
+                        return isTrue === false; 
                     }
                 });
             }
@@ -178,7 +183,7 @@
             console.log("Overgebleven personages na filter:", remainingCharacters);
             nextStep();
         }
-
+        
         function showResult() {
             document.getElementById('screen-game').classList.add('hidden');
             document.getElementById('screen-result').classList.remove('hidden');
