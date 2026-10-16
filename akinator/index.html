@@ -48,6 +48,8 @@
         <div id="screen-result" class="hidden">
             <h2 class="text-xl font-bold mb-2 text-indigo-400" id="result-title">Is this your character?</h2>
             <div id="result-box" class="my-6 p-4 bg-slate-700/50 rounded-xl border border-slate-600">
+                <!-- Afbeelding element (wordt automatisch verborgen als er geen geldige link is) -->
+                <img id="result-image" src="" alt="Character Image" class="w-32 h-32 object-cover mx-auto mb-4 rounded-xl hidden border border-slate-500 shadow-md">
                 <h3 id="result-name" class="text-2xl font-extrabold text-white">Character Name</h3>
             </div>
             <div class="space-y-3">
@@ -134,10 +136,8 @@
         }
 
         function nextStep() {
-            // Zoek een vraag die nog niet gesteld is
             const availableQuestions = allQuestions.filter(q => !askedQuestionAttributes.has(q.attribute));
 
-            // Als er geen vragen meer zijn OF er is nog maar 1 personage over: toon resultaat
             if (remainingCharacters.length <= 1 || availableQuestions.length === 0) {
                 showResult();
                 return;
@@ -149,28 +149,22 @@
             document.getElementById('question-text').innerText = currentQuestion.question;
         }
 
-      window.answerQuestion = function(answer) {
+        window.answerQuestion = function(answer) {
             if (!currentQuestion) return;
             const attr = currentQuestion.attribute;
             askedQuestionAttributes.add(attr);
 
-            console.log(`Vraag gesteld over attribuut: '${attr}', Antwoord van speler: ${answer}`);
-
             if (answer !== 'dont_know') {
                 remainingCharacters = remainingCharacters.filter(char => {
-                    let attrs = char.attributes || char;
+                    let attrs = char.attributes || {};
                     let val = attrs[attr];
 
-                    // Als het attribuut zelf weer een object/map blijkt te zijn (dubbele nesting in Firebase), 
-                    // pak dan de waarde daar weer uit die dezelfde naam heeft als het attribuut.
                     if (val && typeof val === 'object') {
-                        val = val[attr];
+                        const keys = Object.keys(val);
+                        val = keys.length > 0 ? val[keys[0]] : false;
                     }
-                    
-                    // Check of het true is (vangt boolean true, string "true", of getal 1 op)
-                    const isTrue = (val === true || val === "true" || val === 1);
 
-                    console.log(`- Personage: ${char.name || char.naam}, Waarde van ${attr}:`, val, `(isTrue: ${isTrue})`);
+                    const isTrue = (val === true || val === "true" || val === 1 || val === "1");
 
                     if (answer === true) {
                         return isTrue === true; 
@@ -180,26 +174,42 @@
                 });
             }
 
-            console.log("Overgebleven personages na filter:", remainingCharacters);
             nextStep();
         }
-        
+
         function showResult() {
             document.getElementById('screen-game').classList.add('hidden');
             document.getElementById('screen-result').classList.remove('hidden');
 
             const titleEl = document.getElementById('result-title');
             const nameEl = document.getElementById('result-name');
+            const imgEl = document.getElementById('result-image');
 
-            if (remainingCharacters.length === 1) {
-                titleEl.innerText = "Is this your character?";
-                nameEl.innerText = remainingCharacters[0].name || remainingCharacters[0].naam || "Unknown Character";
-            } else if (remainingCharacters.length > 1) {
-                titleEl.innerText = "I think it is:";
-                nameEl.innerText = remainingCharacters[0].name || remainingCharacters[0].naam || "Unknown Character";
+            if (remainingCharacters.length > 0) {
+                const char = remainingCharacters[0];
+                
+                if (remainingCharacters.length === 1) {
+                    titleEl.innerText = "Is this your character?";
+                } else {
+                    titleEl.innerText = "I think it is:";
+                }
+                
+                nameEl.innerText = char.name || char.naam || "Unknown Character";
+
+                // Check of er een echte afbeeldingslink is (en geen "later" of leeg veld)
+                if (char.image && char.image !== "later" && char.image.trim() !== "") {
+                    imgEl.src = char.image;
+                    imgEl.classList.remove('hidden');
+                } else {
+                    imgEl.classList.add('hidden');
+                    imgEl.src = "";
+                }
+
             } else {
                 titleEl.innerText = "Oops...";
                 nameEl.innerText = "I couldn't find your character! 😢";
+                imgEl.classList.add('hidden');
+                imgEl.src = "";
             }
         }
 
