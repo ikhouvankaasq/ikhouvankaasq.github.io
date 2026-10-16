@@ -4,12 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Akinator Clone</title>
-    <!-- Tailwind CSS voor een moderne look -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4">
 
-    <!-- CONTAINER -->
     <div id="app" class="w-full max-w-md bg-slate-800 p-6 rounded-2xl shadow-xl border border-slate-700 text-center">
         
         <!-- STAP 1: HOMEPAGE -->
@@ -59,12 +57,10 @@
 
     </div>
 
-    <!-- FIREBASE LOGICA -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // Jouw Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyC_S2t4gW6I0BFqaJeFHnJYtAHgkvdZp7c",
             authDomain: "akinator-d3903.firebaseapp.com",
@@ -84,7 +80,6 @@
         let currentQuestion = null;
         let questionCount = 0;
 
-        // Data inladen vanuit Firestore
         async function loadGameData() {
             const statusEl = document.getElementById('loading-status');
             const startBtn = document.getElementById('start-btn');
@@ -96,8 +91,8 @@
                 const qSnapshot = await getDocs(collection(db, "Questions"));
                 allQuestions = qSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                console.log("Geladen characters:", allCharacters);
-                console.log("Geladen questions:", allQuestions);
+                console.log("Loaded characters:", allCharacters);
+                console.log("Loaded questions:", allQuestions);
 
                 if (allCharacters.length > 0 && allQuestions.length > 0) {
                     statusEl.innerText = "Think of a character, and let the system guess it!";
@@ -109,7 +104,7 @@
                 }
 
             } catch (error) {
-                console.error("Fout bij inladen data:", error);
+                console.error("Error loading data:", error);
                 statusEl.innerText = "Error loading data. Check console (F12).";
             }
         }
@@ -143,15 +138,19 @@
         }
 
         function nextStep() {
-            // Als er 1 of 0 personages over zijn, of alle vragen zijn op: toon resultaat
-            if (remainingCharacters.length <= 1 || askedQuestionAttributes.size >= allQuestions.length) {
+            // Als er nog maar 1 personage over is, stop direct en toon het resultaat!
+            if (remainingCharacters.length === 1 || askedQuestionAttributes.size >= allQuestions.length) {
                 showResult();
                 return;
             }
 
-            questionCount++;
-            document.getElementById('question-counter').innerText = `Question ${questionCount}`;
+            // Als er 0 over zijn
+            if (remainingCharacters.length === 0) {
+                showResult();
+                return;
+            }
 
+            // Zoek een vraag die we nog niet gesteld hebben
             const availableQuestions = allQuestions.filter(q => !askedQuestionAttributes.has(q.attribute));
 
             if (availableQuestions.length === 0) {
@@ -159,6 +158,8 @@
                 return;
             }
 
+            questionCount++;
+            document.getElementById('question-counter').innerText = `Question ${questionCount}`;
             currentQuestion = availableQuestions[0];
             document.getElementById('question-text').innerText = currentQuestion.question;
         }
@@ -167,26 +168,24 @@
             const attr = currentQuestion.attribute;
             askedQuestionAttributes.add(attr);
 
-            console.log(`--- Vraag over '${attr}' | Antwoord: ${answer} ---`);
-            console.log("Personages voor filter:", remainingCharacters.map(c => c.name || c.naam));
-
             if (answer !== 'dont_know') {
                 remainingCharacters = remainingCharacters.filter(char => {
-                    const attributes = char.attributes || {};
-                    const val = attributes[attr];
+                    // Pak de attributenmap (veilig opvangen als die er niet is)
+                    const attrs = char.attributes || {};
+                    const val = attrs[attr];
                     
-                    // Check of het attribuut true is (vangt zowel boolean true als string "true" op)
-                    const isTrue = (val === true || val === "true");
+                    // Super flexibele check: vang boolean true, string "true", 1, etc. op
+                    const isTrue = (val === true || val === "true" || val === 1);
 
                     if (answer === true) {
-                        return isTrue === true; // Moet true zijn
+                        return isTrue === true;
                     } else {
-                        return isTrue === false; // Anders (false of niet ingevuld)
+                        return isTrue === false;
                     }
                 });
             }
 
-            console.log("Personages na filter:", remainingCharacters.map(c => c.name || c.naam));
+            console.log("Overgebleven na filter:", remainingCharacters);
             nextStep();
         }
 
@@ -201,7 +200,6 @@
                 titleEl.innerText = "Is this your character?";
                 nameEl.innerText = remainingCharacters[0].name || remainingCharacters[0].naam || "Unknown Character";
             } else if (remainingCharacters.length > 1) {
-                // Als er na alle vragen nog meerdere over zijn, gokken we de eerste
                 titleEl.innerText = "I think it is:";
                 nameEl.innerText = remainingCharacters[0].name || remainingCharacters[0].naam || "Unknown Character";
             } else {
